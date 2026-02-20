@@ -38,20 +38,22 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/msa-shop:latest
 
       # 4. GCP Server 2 배포
+# ... (앞부분 생략: 빌드 및 도커 푸시 단계는 동일)
+
       - name: Deploy to GCP Server 2
         uses: appleboy/ssh-action@master
         with:
           host: 34.50.60.193
           username: oksm1003
-          key: ${{ secrets.GCP_KEY }} # 확인된 Secret 이름으로 수정
+          key: ${{ secrets.GCP_KEY }}
           script: |
-            # 1. shop 폴더로 이동 (서버에 폴더 없으면 에러나니까 미리 만들어둬!)
             cd /home/oksm1003/shop 
             
-            # 2. 코드 업데이트
+            # 레포지토리 주소를 rame86 것으로 명확히 지정
+            git remote set-url origin https://github.com/rame86/server2_commerce_shop.git
             git pull origin main
             
-            # 3. .env 파일 자동 생성 (알려준 Secrets 이름에 맞춤)
+            # .env 설정 및 실행 (나머지 동일)
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
             echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
@@ -59,7 +61,6 @@ jobs:
             echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
             echo "TZ=Asia/Seoul" >> .env
             
-            # 4. 컨테이너 갱신 및 실행
             docker compose pull
             docker compose up -d
             docker image prune -f
