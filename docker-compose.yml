@@ -1,3 +1,5 @@
+#shop-service/ docker-compose.yml
+
 services:
   shop:
     image: ssrabw/msa-shop:latest
