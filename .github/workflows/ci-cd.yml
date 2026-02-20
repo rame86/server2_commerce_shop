@@ -2,12 +2,11 @@ name: Shop Service CI/CD
 
 on:
   push:
-    branches: [ main ] # Shop은 main 브랜치 기준
+    branches: [ master ] # 1. 트리거 브랜치를 master로 변경
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,7 +37,6 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/msa-shop:latest
 
       # 4. GCP Server 2 배포
-# ... (앞부분 생략: 빌드 및 도커 푸시 단계는 동일)
 
       - name: Deploy to GCP Server 2
         uses: appleboy/ssh-action@master
@@ -49,11 +47,14 @@ jobs:
           script: |
             cd /home/oksm1003/shop 
             
-            # 레포지토리 주소를 rame86 것으로 명확히 지정
             git remote set-url origin https://github.com/rame86/server2_commerce_shop.git
-            git pull origin main
             
-            # .env 설정 및 실행 (나머지 동일)
+            # 2. 서버에서 가져올 브랜치도 master로 변경 (중요!)
+            git fetch origin master
+            git checkout master || git checkout -b master
+            git reset --hard origin/master 
+            
+            # .env 설정 및 실행
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
             echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
