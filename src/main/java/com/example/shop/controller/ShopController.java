@@ -12,11 +12,18 @@ import com.example.shop.service.ShopService;
 
 import lombok.RequiredArgsConstructor;
 
+
 @RestController
 @RequiredArgsConstructor
 public class ShopController {
     private final ShopService shopService;
 
+
+    @GetMapping("/")
+    public String test() {
+        return "test";
+    }
+    
     @GetMapping("/products")
     public List<Product> list() {
         return shopService.getActiveProducts();
