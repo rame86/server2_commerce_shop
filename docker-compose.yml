@@ -6,7 +6,7 @@ services:
     ports:
       - "8081:8081" # 외부 8081을 컨테이너 내부 8080(Spring 기본)으로 연결 [cite: 2026-02-14]
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://34.158.208.117:5432/msa_core_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://34.158.208.117:5432/msa_shop_db
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       SPRING_RABBITMQ_HOST: 34.158.208.117
