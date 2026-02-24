@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 public class ShopController {
+
     private final ShopService shopService;
 
 
