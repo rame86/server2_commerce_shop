@@ -1,0 +1,3 @@
+POST http://localhost/msa/shop/shop/order
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyMTYyMzUwLCJleHAiOjE3NzIxNjU5NTB9.zL0TI9mSk8Qj3pG6kFwEeD44NZrXGVn5-l1gH0K0NBeg4IwFbdTmklvbn9MlIuuQ
