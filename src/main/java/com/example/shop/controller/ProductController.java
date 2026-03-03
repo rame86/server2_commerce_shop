@@ -1,12 +1,15 @@
 package com.example.shop.controller;
 
-import org.apache.ibatis.annotations.Delete;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+
 
 @Slf4j
 @RestController
@@ -34,32 +37,32 @@ public class ProductController {
         return "팬메이드굿즈 목록 받음";
     }
 
-    @GetMapping("/updateOffical")
+    @PostMapping("/updateOffical")
     public String updateOffical() {
         return "공식굿즈 등록";
     }
 
-    @GetMapping("/updateSecondhand")
+    @PostMapping("/updateSecondhand")
     public String updateSecondhand() {
         return "중고굿즈 등록";
     }
 
-    @GetMapping("/updateFanmade")
+    @PostMapping("/updateFanmade")
     public String updateFanmade() {
         return "팬메이드굿즈 등록";
     }
 
-    @Delete("/deleteOffical")
+    @DeleteMapping("/deleteOffical")
     public String deleteOffical() {
         return "공식굿즈 삭제";
     }
 
-    @Delete("/deleteSecondhand")
+    @DeleteMapping("/deleteSecondhand")
     public String deleteSecondhand() {
         return "중고굿즈 삭제";
     }
 
-    @Delete("/deleteFanmade")
+    @DeleteMapping("/deleteFanmade")
     public String deleteFanmade() {
         return "팬메이드굿즈 삭제";
     }
