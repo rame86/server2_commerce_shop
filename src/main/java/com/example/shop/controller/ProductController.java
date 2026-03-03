@@ -1,7 +1,6 @@
 package com.example.shop.controller;
 
 import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Update;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,17 +34,17 @@ public class ProductController {
         return "팬메이드굿즈 목록 받음";
     }
 
-    @Update("/updateOffical")
+    @GetMapping("/updateOffical")
     public String updateOffical() {
         return "공식굿즈 등록";
     }
 
-    @Update("/updateSecondhand")
+    @GetMapping("/updateSecondhand")
     public String updateSecondhand() {
         return "중고굿즈 등록";
     }
 
-    @Update("/updateFanmade")
+    @GetMapping("/updateFanmade")
     public String updateFanmade() {
         return "팬메이드굿즈 등록";
     }
