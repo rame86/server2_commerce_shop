@@ -1,5 +1,6 @@
 package com.example.shop.controller;
 
+import org.apache.ibatis.annotations.Delete;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,11 +19,9 @@ public class ShopController {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-
     @GetMapping("/")
     public String shoplist() {
         return "전체목록 요청받음";
-
     }
 
     @GetMapping("/detail")
@@ -40,7 +39,7 @@ public class ShopController {
         return user_info;
     }
 
-     @GetMapping("/userTestRedis")
+    @GetMapping("/userTestRedis")
     public String userTestRedis() {
         String user_info = "";
 
@@ -80,6 +79,11 @@ public class ShopController {
     @PostMapping("/checkout")
     public String checkout() {
         return "주문하기 요청받음";
+    }
+
+    @Delete("/deletecart")
+    public String deletecart() {
+        return "장바구니 상품 삭제";
     }
 
 }
