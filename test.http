@@ -1,2 +1,2 @@
 
-POST http://34.64.85.123/api/shop/products
+GET http://localhost:8081/shop/
