@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.shop.service.ShopService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,6 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProductController {
 
+    private final ShopService shopService;
+    
     @GetMapping("/")
     public String product() {
         return "굿즈 전체목록 받음";

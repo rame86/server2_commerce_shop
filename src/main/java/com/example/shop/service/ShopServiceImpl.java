@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.shop.common.BusinessException;
@@ -24,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  * 상품 관리 및 주문 처리 로직 담당
  */
 @Slf4j
-// @Service
+@Service
 @RequiredArgsConstructor
 public class ShopServiceImpl implements ShopService {
 

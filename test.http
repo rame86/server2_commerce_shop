@@ -1,5 +1,7 @@
 
-# GET http://localhost:8081/shop/updateWishlist
+POST http://localhost:8081/shop/updateWishlist
 
 
-GET http://localhost:8081/product/updateOffical
+
+
+# GET http://localhost:8081/product/updateOffical

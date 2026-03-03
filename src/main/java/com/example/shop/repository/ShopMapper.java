@@ -14,12 +14,24 @@ import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import com.example.shop.common.util.JsonbTypeHandler;
 import com.example.shop.dto.response.OrderItemResponseDto;
 import com.example.shop.dto.response.OrderResponseDto;
 import com.example.shop.dto.response.ProductResponseDto;
+import com.example.shop.dto.response.ShopResponseDTO;
 
 @Mapper
 public interface ShopMapper {
+
+@Select("SELECT product_id, product_name, product_detail FROM shop.products WHERE product_id = #{productId}")
+    @Results(id = "ShopResultMap", value = {
+        @Result(property = "productId", column = "product_id"),
+        @Result(property = "productName", column = "product_name"),
+        // JSONB 컬럼에 TypeHandler 적용
+        @Result(property = "productDetail", column = "product_detail", 
+                typeHandler = JsonbTypeHandler.class)
+    })
+    ShopResponseDTO findById(@Param("productId") Long productId);
 
     // ========== 상품 ==========
 
