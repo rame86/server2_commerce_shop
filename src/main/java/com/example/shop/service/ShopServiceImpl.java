@@ -8,8 +8,8 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.shop.common.BusinessException;
-import com.example.shop.common.ErrorCode;
+import com.example.shop.common.exception.BusinessException;
+import com.example.shop.common.exception.ErrorCode;
 import com.example.shop.dto.request.OrderCreateRequestDto;
 import com.example.shop.dto.request.OrderItemDto;
 import com.example.shop.dto.request.ProductCreateRequestDto;

@@ -1,7 +1,5 @@
 package com.example.shop.dto.response;
 
-import java.util.Map;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,5 +15,5 @@ public class ShopResponseDTO {
     private Long productId;
     private String productName;
     // DB의 JSONB 컬럼과 매핑될 필드
-    private Map<String, Object> productDetail; 
+    private String productDetail;
 }
