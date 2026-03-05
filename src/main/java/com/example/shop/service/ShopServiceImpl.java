@@ -1,16 +1,27 @@
 package com.example.shop.service;
 
-import com.example.shop.entity.*;
-import com.example.shop.repository.*;
-import com.example.shop.dto.request.*;
-import com.example.shop.dto.response.*;
-import com.example.shop.common.exception.*;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import com.example.shop.common.exception.BusinessException;
+import com.example.shop.common.exception.ErrorCode;
+import com.example.shop.dto.request.OrderCreateRequestDto;
+import com.example.shop.dto.request.OrderItemDto;
+import com.example.shop.dto.request.ProductCreateRequestDto;
+import com.example.shop.dto.response.OrderResponseDto;
+import com.example.shop.dto.response.ProductResponseDto;
+import com.example.shop.entity.Order;
+import com.example.shop.entity.OrderItem;
+import com.example.shop.entity.OrderStatus;
+import com.example.shop.entity.Product;
+import com.example.shop.repository.OrderRepository;
+import com.example.shop.repository.ProductRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
