@@ -1,14 +1,14 @@
 package com.example.shop.dto.request;
 
-import jakarta.validation.constraints.*;
-import lombok.Getter;
 import java.math.BigDecimal;
 
-@Getter
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter @Setter
 public class ProductCreateRequestDto {
-    @NotBlank private String category;  // OFFICIAL, UNOFFICIAL, SECONDHAND
-    @NotBlank private String title;
-    private String description;
-    @NotNull @DecimalMin("0") private BigDecimal price;
-    @Min(0) private int stockQuantity;
+    private String productName;
+    private String productDetail; // ← 이게 없어서 에러가 났던 겁니다. 추가하세요!
+    private BigDecimal price;
+    private String category;
 }

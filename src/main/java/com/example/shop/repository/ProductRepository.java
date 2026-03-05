@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.example.shop.entity.Product;
 
 public interface ProductRepository extends JpaRepository<Product, UUID> {
-    // 기본 CRUD 메서드 자동 제공
+    // 필요한 경우 findByIsActiveTrue() 등 추가 가능
 }

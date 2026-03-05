@@ -16,6 +16,7 @@ import com.example.shop.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+
 @RestController
 @RequestMapping("/shop")
 @Slf4j
