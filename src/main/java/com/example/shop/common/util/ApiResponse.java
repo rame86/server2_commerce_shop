@@ -1,4 +1,4 @@
-package com.example.shop.common;
+package com.example.shop.common.util;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

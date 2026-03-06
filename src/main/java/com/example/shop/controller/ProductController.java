@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.shop.service.ShopService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-
 
 @Slf4j
 @RestController
@@ -17,6 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProductController {
 
+    private final ShopService shopService;
+
+    /*************************************************************/
+    // 공통사용
+    /*************************************************************/
     @GetMapping("/")
     public String product() {
         return "굿즈 전체목록 받음";
@@ -37,11 +42,22 @@ public class ProductController {
         return "팬메이드굿즈 목록 받음";
     }
 
+    /*************************************************************/
+    // 관리자
+    /*************************************************************/
     @PostMapping("/updateOffical")
     public String updateOffical() {
         return "공식굿즈 등록";
     }
 
+    @DeleteMapping("/deleteOffical")
+    public String deleteOffical() {
+        return "공식굿즈 삭제";
+    }
+
+    /*************************************************************/
+    // 유저
+    /*************************************************************/
     @PostMapping("/updateSecondhand")
     public String updateSecondhand() {
         return "중고굿즈 등록";
@@ -50,11 +66,6 @@ public class ProductController {
     @PostMapping("/updateFanmade")
     public String updateFanmade() {
         return "팬메이드굿즈 등록";
-    }
-
-    @DeleteMapping("/deleteOffical")
-    public String deleteOffical() {
-        return "공식굿즈 삭제";
     }
 
     @DeleteMapping("/deleteSecondhand")

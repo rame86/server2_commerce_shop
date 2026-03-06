@@ -32,4 +32,7 @@ public interface ShopService {
 
     // 주문 취소
     OrderResponseDto cancelOrder(Long memberId, String orderId);
+
+    //제품 상세보기
+    
 }
