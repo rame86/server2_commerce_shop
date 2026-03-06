@@ -1,11 +1,14 @@
 package com.example.shop.service;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
@@ -18,6 +21,7 @@ import com.example.shop.entity.Order;
 import com.example.shop.entity.OrderItem;
 import com.example.shop.entity.OrderStatus;
 import com.example.shop.entity.Product;
+import com.example.shop.entity.ProductCategory;
 import com.example.shop.repository.OrderRepository;
 import com.example.shop.repository.ProductRepository;
 
@@ -30,12 +34,19 @@ public class ShopServiceImpl implements ShopService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
 
-   @Override
+    private final String uploadPath = "D:/shop/images/";
+
+    @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDto> getProducts(String category, Long sellerId, int page, int size) {
-        // stream().map(ProductResponseDto::fromEntity) 호출 시 
-        // ProductResponseDto에 static 메서드가 있어야 합니다.
+        if (category != null && !category.isEmpty()) {
+            ProductCategory productCategory = ProductCategory.valueOf(category.toUpperCase());
+            return productRepository.findByCategoryAndIsActiveTrue(productCategory).stream()
+                    .map(ProductResponseDto::fromEntity)
+                    .collect(Collectors.toList());
+        }
         return productRepository.findAll().stream()
+                .filter(Product::getIsActive)
                 .map(ProductResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -50,18 +61,36 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional
-    public ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto) {
-        // Product.builder() 사용 시 Product 엔티티에 @Builder가 있어야 합니다.
+    public ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto, MultipartFile imageFile) {
+        String savedFileName = null;
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                String originalFilename = imageFile.getOriginalFilename();
+                savedFileName = UUID.randomUUID().toString() + "_" + originalFilename;
+
+                File saveDir = new File(uploadPath);
+                if (!saveDir.exists()) saveDir.mkdirs();
+
+                imageFile.transferTo(new File(uploadPath + savedFileName));
+            } catch (IOException e) {
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
+            }
+        }
+
+        ProductCategory productCategory = role.equals("ADMIN") ? ProductCategory.OFFICIAL : ProductCategory.SECONDHAND;
+
         Product product = Product.builder()
+                .category(productCategory)
                 .sellerId(memberId)
                 .title(requestDto.getProductName())
                 .description(requestDto.getProductDetail())
                 .price(requestDto.getPrice())
+                .imageUrl(savedFileName)
                 .isActive(true)
                 .build();
-        
-        Product savedProduct = productRepository.save(product);
-        return ProductResponseDto.fromEntity(savedProduct);
+
+        return ProductResponseDto.fromEntity(productRepository.save(product));
     }
 
     @Override
@@ -69,7 +98,8 @@ public class ShopServiceImpl implements ShopService {
     public void deleteProduct(Long memberId, String productId) {
         Product product = productRepository.findById(UUID.fromString(productId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        if (!product.getSellerId().equals(memberId)) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!product.getSellerId().equals(memberId))
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         product.softDelete();
     }
 
@@ -97,7 +127,6 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponseDto> getMyOrders(Long memberId, int page, int size) {
-        // 실제 운영 환경에서는 Repository에 findByMemberId를 만들어 호출해야 함
         return orderRepository.findAll().stream()
                 .filter(o -> o.getMemberId().equals(memberId))
                 .map(OrderResponseDto::fromEntity)
@@ -109,7 +138,8 @@ public class ShopServiceImpl implements ShopService {
     public OrderResponseDto getOrder(Long memberId, String orderId) {
         Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        if (!order.getMemberId().equals(memberId)) throw new BusinessException(ErrorCode.FORBIDDEN);
+        if (!order.getMemberId().equals(memberId))
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         return OrderResponseDto.fromEntity(order);
     }
 
@@ -118,9 +148,8 @@ public class ShopServiceImpl implements ShopService {
     public OrderResponseDto cancelOrder(Long memberId, String orderId) {
         Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        if (!order.getMemberId().equals(memberId)) throw new BusinessException(ErrorCode.FORBIDDEN);
-        
-        // 간단한 취소 로직 (엔티티에 status 변경 로직 필요)
+        if (!order.getMemberId().equals(memberId))
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         return OrderResponseDto.fromEntity(order);
     }
 }
