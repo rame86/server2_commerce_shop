@@ -1,33 +1,31 @@
 package com.example.shop.dto.response;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import com.example.shop.entity.Product;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter 
-@Setter 
-@Builder // 이 어노테이션이 있어야 .productName() 같은 빌더 메서드가 생성됩니다.
-@NoArgsConstructor 
-@AllArgsConstructor
+@Getter
+@Builder
 public class ProductResponseDto {
-    private String productId;
-    private String productName;  // ← 서비스에서 찾고 있는 이름
-    private String productDetail; // ← 서비스에서 찾고 있는 이름
+    private UUID productId;
+    private String title;
+    private String description;
     private BigDecimal price;
+    private String imageUrl; 
 
-    // 서비스에서 map(ProductResponseDto::fromEntity)를 쓸 수 있게 추가
-    public static ProductResponseDto fromEntity(Product p) {
+    // Entity(DB 데이터)를 Dto(화면용 데이터)로 변환하는 핵심 메서드
+    public static ProductResponseDto fromEntity(Product product) {
         return ProductResponseDto.builder()
-                .productId(p.getProductId().toString())
-                .productName(p.getTitle())       // 엔티티의 title을 DTO의 productName으로 매핑
-                .productDetail(p.getDescription()) // 엔티티의 description을 DTO의 productDetail로 매핑
-                .price(p.getPrice())
+                .productId(product.getProductId())
+                .title(product.getTitle())
+                .description(product.getDescription())
+                .price(product.getPrice())
+                // [중요] DB의 파일 이름 앞에 웹 경로(/images/)를 붙여서 브라우저가 찾을 수 있게 함
+                .imageUrl(product.getImageUrl() != null ? "/images/" + product.getImageUrl() : null)
                 .build();
     }
 }
