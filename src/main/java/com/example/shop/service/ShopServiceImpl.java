@@ -6,12 +6,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
+import com.example.shop.dto.message.ProductCreatedMessage;
 import com.example.shop.dto.request.OrderCreateRequestDto;
 import com.example.shop.dto.request.OrderItemDto;
 import com.example.shop.dto.request.ProductCreateRequestDto;
@@ -24,21 +26,28 @@ import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductCategory;
 import com.example.shop.entity.ProductVariant;
 import com.example.shop.entity.SellerType;
+import com.example.shop.messaging.producer.ProductMessageProducer;
 import com.example.shop.repository.OrderRepository;
 import com.example.shop.repository.ProductRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShopServiceImpl implements ShopService {
+
+    private final ProductMessageProducer productMessageProducer;
+
+    private final RabbitTemplate rabbitTemplate;
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
 
     // 이미지 저장 기본 경로 (보안 점검: 운영 환경에서는 별도의 스토리지나 설정 파일 주입 권장)
     private final String uploadPath = "D:/shop/images/";
-
+    
     // 조건별 상품 목록을 조회하는 메서드
     @Override
     @Transactional(readOnly = true) // 데이터 변경이 없으므로 성능을 위해 읽기 전용 트랜잭션 적용
@@ -64,34 +73,28 @@ public class ShopServiceImpl implements ShopService {
         return ProductResponseDto.fromEntity(product);
     }
 
-    // 핵심 로직: 이미지와 상품의 상세 옵션(Variants)을 하나의 트랜잭션으로 묶어서 저장
     @Override
     @Transactional
     public ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto, MultipartFile imageFile) {
         String savedFileName = null;
 
-        // 1. 첨부된 이미지 파일이 있을 경우 물리적 경로에 파일 저장 수행
+        // 1. 이미지 저장 (기존 로직 유지)
         if (imageFile != null && !imageFile.isEmpty()) {
             try {
                 String originalFilename = imageFile.getOriginalFilename();
-                // 파일명 중복 방지를 위한 UUID 부착
                 savedFileName = UUID.randomUUID().toString() + "_" + originalFilename;
-
                 File saveDir = new File(uploadPath);
-                if (!saveDir.exists()) saveDir.mkdirs(); // 디렉토리가 없으면 생성
-
+                if (!saveDir.exists()) saveDir.mkdirs();
                 imageFile.transferTo(new File(uploadPath + savedFileName));
             } catch (IOException e) {
-                // I/O 예외 발생 시 비즈니스 커스텀 예외로 래핑하여 던짐 (트랜잭션 롤백 유도)
                 throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
             }
         }
 
-        // 2. 권한 정보(role)를 분석하여 ProductCategory 및 DB에 매핑될 SellerType 결정
+        // 2. 엔티티 생성 및 옵션 추가 (기존 로직 유지)
         ProductCategory productCategory = role.equals("ADMIN") ? ProductCategory.OFFICIAL : ProductCategory.SECONDHAND;
-        SellerType sellerType = role.equals("ARTIST") ? SellerType.ARTIST : SellerType.USER; // 권한에 따른 아티스트/유저 분기
+        SellerType sellerType = role.equals("ARTIST") ? SellerType.ARTIST : SellerType.USER;
 
-        // 3. 빌더 패턴을 이용해 부모 엔티티인 Product 객체 초기화
         Product product = Product.builder()
                 .category(productCategory)
                 .sellerType(sellerType) 
@@ -103,25 +106,32 @@ public class ShopServiceImpl implements ShopService {
                 .isActive(true)
                 .build();
 
-        // 4. 요청 DTO에 상세 옵션(Variants) 데이터가 포함되어 있다면 추출하여 엔티티로 변환
-        if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
+        if (requestDto.getVariants() != null) {
             requestDto.getVariants().forEach(vDto -> {
-                ProductVariant variant = ProductVariant.builder()
+                product.addVariant(ProductVariant.builder()
                         .color(vDto.getColor())
                         .size(vDto.getSize())
                         .additionalPrice(vDto.getAdditionalPrice())
                         .stockQuantity(vDto.getStockQuantity())
                         .skuCode(vDto.getSkuCode())
-                        .build();
-                // 5. 생성된 옵션 객체를 부모 상품의 리스트에 추가 (양방향 연관관계 편의 메서드 호출)
-                product.addVariant(variant); 
+                        .build());
             });
         }
+        System.out.println("!!! 상품 저장 직전 !!!");
+        // 3. DB 저장
+        Product savedProduct = productRepository.save(product);
+        
+       // 4. [수정] 분리된 Producer를 호출하여 메시지 발행
+        productMessageProducer.sendProductCreatedEvent(new ProductCreatedMessage(
+            savedProduct.getProductId(),
+            savedProduct.getTitle(),
+            savedProduct.getPrice(),
+            savedProduct.getCategory().name(),
+            savedProduct.getSellerId()
+        ));
 
-        // 6. DB에 최종 저장 (Product의 Cascade 설정에 의해 리스트에 담긴 Variant들도 함께 INSERT 됨)
-        return ProductResponseDto.fromEntity(productRepository.save(product));
+        return ProductResponseDto.fromEntity(savedProduct);
     }
-
     // 판매자가 본인의 상품을 삭제(비활성화) 처리하는 메서드
     @Override
     @Transactional
