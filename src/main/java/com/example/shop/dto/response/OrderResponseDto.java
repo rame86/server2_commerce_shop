@@ -23,8 +23,6 @@ public class OrderResponseDto {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
-
-
     public static OrderResponseDto fromEntity(Order order) {
         return OrderResponseDto.builder()
                 .orderId(order.getOrderId().toString())
