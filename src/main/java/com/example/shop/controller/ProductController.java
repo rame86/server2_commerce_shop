@@ -40,7 +40,7 @@ public class ProductController {
      * GET /product/official
      */
     @GetMapping("/official")
-    public List<ProductResponseDto> officialMerchandise() {
+    public List<ProductResponseDto> official() {
         // category를 "official"로 필터링하여 서비스에 상품 목록을 요청함
         return shopService.getProducts("official", null, 0, 10);
     }
@@ -51,14 +51,14 @@ public class ProductController {
     }
 
     @GetMapping("/unofficial")
-    public String fanmade() {
-        return "팬메이드굿즈 목록 받음";
+    public List<ProductResponseDto> fanmade() {
+        return shopService.getProducts("unofficial", null, 0, 10);
     }
 
     /*************************************************************/
     // 관리자
     /*************************************************************/
- /**
+    /**
      * [공식 굿즈 등록 - 관리자 전용]
      * POST /product/official
      * consumes = MediaType.MULTIPART_FORM_DATA_VALUE: JSON 데이터와 파일을 동시에 받기 위한 설정
@@ -71,7 +71,7 @@ public class ProductController {
         // 실제 운영 환경에서는 로그인 정보(SecurityContext)에서 memberId를 뽑아야 하지만, 현재는 테스트용으로 1L(관리자) 전달
         return shopService.createProduct(1L, "ADMIN", requestDto, image);
     }
-   /**
+    /**
      * [공식 굿즈 삭제]
      * DELETE /product/official/{productId}
      */
