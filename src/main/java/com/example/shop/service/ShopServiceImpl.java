@@ -6,14 +6,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
-import com.example.shop.dto.message.ProductCreatedMessage;
+import com.example.shop.dto.message.ShopApprovalMessage;
 import com.example.shop.dto.request.OrderCreateRequestDto;
 import com.example.shop.dto.request.OrderItemDto;
 import com.example.shop.dto.request.ProductCreateRequestDto;
@@ -39,46 +38,60 @@ import lombok.extern.slf4j.Slf4j;
 public class ShopServiceImpl implements ShopService {
 
     private final ProductMessageProducer productMessageProducer;
-
-    private final RabbitTemplate rabbitTemplate;
-
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
 
-    // 이미지 저장 기본 경로 (보안 점검: 운영 환경에서는 별도의 스토리지나 설정 파일 주입 권장)
+    // 이미지 저장 기본 경로 (운영 환경에서는 설정 파일로 주입 권장)
     private final String uploadPath = "D:/shop/images/";
-    
-    // 조건별 상품 목록을 조회하는 메서드
+
+    // ======================== 상품 관련 ========================
+
+    /**
+     * 카테고리별 상품 목록 조회
+     * goodsType이 있으면 해당 타입만, 없으면 전체 활성 상품 반환
+     */
     @Override
-    @Transactional(readOnly = true) // 데이터 변경이 없으므로 성능을 위해 읽기 전용 트랜잭션 적용
-    public List<ProductResponseDto> getProducts(String category, Long sellerId, int page, int size) {
-        if (category != null && !category.isEmpty()) {
-            ProductCategory productCategory = ProductCategory.valueOf(category.toUpperCase());
-            return productRepository.findByCategoryAndIsActiveTrue(productCategory).stream()
+    @Transactional(readOnly = true)
+    public List<ProductResponseDto> getProducts(String goodsType, Long requesterId, int page, int size) {
+        if (goodsType != null && !goodsType.isEmpty()) {
+            // 카테고리 enum 변환 후 해당 카테고리 활성 상품만 조회
+            ProductCategory productCategory = ProductCategory.valueOf(goodsType.toUpperCase());
+            return productRepository.findByGoodsTypeAndIsActiveTrue(productCategory).stream()
                     .map(ProductResponseDto::fromEntity)
                     .collect(Collectors.toList());
         }
+        // 카테고리 없으면 전체 활성 상품 조회
         return productRepository.findAll().stream()
-                .filter(Product::getIsActive) // is_active = true인 상품만 필터링
+                .filter(Product::getIsActive)
                 .map(ProductResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    // 단일 상품에 대한 정보를 조회하는 메서드
+    /**
+     * 단일 상품 상세 조회
+     * UUID 변환 실패 또는 상품 없으면 예외 발생
+     */
     @Override
     @Transactional(readOnly = true)
     public ProductResponseDto getProduct(String productId) {
         Product product = productRepository.findById(UUID.fromString(productId))
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND)); // UUID 변환 및 예외 처리
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         return ProductResponseDto.fromEntity(product);
     }
 
+    /**
+     * 상품 등록
+     * 1. 이미지 저장
+     * 2. 상품 엔티티 생성 및 옵션 추가
+     * 3. DB 저장
+     * 4. RabbitMQ로 승인 요청 메시지 발행
+     */
     @Override
     @Transactional
     public ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto, MultipartFile imageFile) {
         String savedFileName = null;
 
-        // 1. 이미지 저장 (기존 로직 유지)
+        // 1. 이미지 파일이 있으면 서버에 저장
         if (imageFile != null && !imageFile.isEmpty()) {
             try {
                 String originalFilename = imageFile.getOriginalFilename();
@@ -91,21 +104,26 @@ public class ShopServiceImpl implements ShopService {
             }
         }
 
-        // 2. 엔티티 생성 및 옵션 추가 (기존 로직 유지)
+        // 2. 권한에 따라 상품 카테고리 및 판매자 타입 결정
+        // ADMIN이면 공식 굿즈, 아니면 중고로 등록
         ProductCategory productCategory = role.equals("ADMIN") ? ProductCategory.OFFICIAL : ProductCategory.SECONDHAND;
+        // ARTIST이면 아티스트 타입, 아니면 일반 유저 타입
         SellerType sellerType = role.equals("ARTIST") ? SellerType.ARTIST : SellerType.USER;
 
+        // 3. 상품 엔티티 생성
         Product product = Product.builder()
-                .category(productCategory)
-                .sellerType(sellerType) 
-                .sellerId(memberId)
-                .title(requestDto.getProductName())
-                .description(requestDto.getProductDetail())
+                .goodsType(productCategory)
+                .sellerType(sellerType)
+                .requesterId(memberId)
+                .requesterName(requestDto.getRequesterName())
+                .goodsName(requestDto.getGoodsName())
+                .description(requestDto.getDescription())
                 .price(requestDto.getPrice())
                 .imageUrl(savedFileName)
                 .isActive(true)
                 .build();
 
+        // 상품 옵션(Variant)이 있으면 함께 추가
         if (requestDto.getVariants() != null) {
             requestDto.getVariants().forEach(vDto -> {
                 product.addVariant(ProductVariant.builder()
@@ -117,48 +135,63 @@ public class ShopServiceImpl implements ShopService {
                         .build());
             });
         }
-        System.out.println("!!! 상품 저장 직전 !!!");
-        // 3. DB 저장
+
+        // 4. DB 저장
         Product savedProduct = productRepository.save(product);
-        
-       // 4. [수정] 분리된 Producer를 호출하여 메시지 발행
-        productMessageProducer.sendProductCreatedEvent(new ProductCreatedMessage(
-            savedProduct.getProductId(),
-            savedProduct.getTitle(),
-            savedProduct.getPrice(),
-            savedProduct.getCategory().name(),
-            savedProduct.getSellerId()
+        log.info("상품 저장 완료 - productId: {}", savedProduct.getProductId());
+
+        // 5. RabbitMQ로 승인 요청 메시지 발행
+        // Variant 재고 합산하여 전달
+        productMessageProducer.sendProductCreatedEvent(new ShopApprovalMessage(
+                null,                                                                        // goodsId (현재 없음)
+                savedProduct.getRequesterId(),                                               // requesterId
+                savedProduct.getRequesterName(),                                             // requesterName
+                savedProduct.getGoodsName(),                                                 // goodsName
+                savedProduct.getGoodsType().name(),                                          // goodsType
+                savedProduct.getDescription(),                                               // description
+                savedProduct.getPrice().intValue(),                                          // price
+                savedProduct.getVariants().stream().mapToInt(v -> v.getStockQuantity()).sum(), // stock 합산
+                savedProduct.getImageUrl()                                                   // imageUrl
         ));
 
         return ProductResponseDto.fromEntity(savedProduct);
     }
-    // 판매자가 본인의 상품을 삭제(비활성화) 처리하는 메서드
+
+    /**
+     * 상품 비활성화 처리 (Soft Delete)
+     * 본인 상품이 아니면 FORBIDDEN 예외 발생
+     */
     @Override
     @Transactional
     public void deleteProduct(Long memberId, String productId) {
         Product product = productRepository.findById(UUID.fromString(productId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        
-        // 데이터 소유자 검증 처리
-        if (!product.getSellerId().equals(memberId))
+
+        // 요청자가 상품 소유자인지 검증
+        if (!product.getRequesterId().equals(memberId))
             throw new BusinessException(ErrorCode.FORBIDDEN);
-            
-        product.softDelete(); // DB의 is_active 컬럼 값을 false로 변경 (추후 조회 조건에서 제외됨)
+
+        // is_active를 false로 변경 (실제 DB에서 삭제하지 않음)
+        product.softDelete();
     }
 
-    /*==========================================================
-     * 주문(Order) 관련 메서드 영역 (보내주신 원본 코드 로직 그대로 유지)
-     *==========================================================*/
-    
+    // ======================== 주문 관련 ========================
+
+    /**
+     * 주문 생성
+     * 주문 항목의 상품 존재 여부 확인 후 주문 저장
+     */
     @Override
     @Transactional
     public OrderResponseDto createOrder(Long memberId, OrderCreateRequestDto requestDto) {
+        // 주문 기본 정보 생성
         Order order = Order.builder()
                 .memberId(memberId)
                 .shippingAddress(requestDto.getShippingAddress())
                 .status(OrderStatus.PENDING)
                 .build();
 
+        // 주문 항목별 상품 조회 후 주문에 추가
         for (OrderItemDto itemDto : requestDto.getItems()) {
             Product product = productRepository.findById(UUID.fromString(itemDto.getProductId()))
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
@@ -171,6 +204,10 @@ public class ShopServiceImpl implements ShopService {
         return OrderResponseDto.fromEntity(orderRepository.save(order));
     }
 
+    /**
+     * 내 주문 목록 조회
+     * 전체 주문에서 해당 회원의 주문만 필터링
+     */
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponseDto> getMyOrders(Long memberId, int page, int size) {
@@ -180,6 +217,10 @@ public class ShopServiceImpl implements ShopService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 단일 주문 상세 조회
+     * 본인 주문이 아니면 FORBIDDEN 예외 발생
+     */
     @Override
     @Transactional(readOnly = true)
     public OrderResponseDto getOrder(Long memberId, String orderId) {
@@ -190,6 +231,10 @@ public class ShopServiceImpl implements ShopService {
         return OrderResponseDto.fromEntity(order);
     }
 
+    /**
+     * 주문 취소
+     * 본인 주문이 아니면 FORBIDDEN 예외 발생
+     */
     @Override
     @Transactional
     public OrderResponseDto cancelOrder(Long memberId, String orderId) {
@@ -197,6 +242,7 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
         if (!order.getMemberId().equals(memberId))
             throw new BusinessException(ErrorCode.FORBIDDEN);
+        // 주문 상태를 CANCELLED로 변경 (추후 구현)
         return OrderResponseDto.fromEntity(order);
     }
 }
