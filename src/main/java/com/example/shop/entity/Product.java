@@ -33,35 +33,40 @@ public class Product extends BaseTimeEntity {
     @Column(name = "product_id")
     private Long productId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "goods_type", nullable = false)
-    private ProductCategory goodsType;
+    // DB: seller_id (bigint)
+    @Column(name = "seller_id")
+    private Long sellerId;
 
+    // DB: seller_type (enum)
     @Enumerated(EnumType.STRING)
     @Column(name = "seller_type", nullable = false)
     private SellerType sellerType;
 
-    @Column(name = "requester_id", nullable = false)
-    private Long requesterId;
+    // DB: category (enum product_category)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false)
+    private ProductCategory category;
 
-    @Column(name = "requester_name", length = 100)
-    private String requesterName;
+    // DB: title (varchar 255)
+    @Column(name = "title", nullable = false, length = 255)
+    private String title;
 
-    @Column(name = "goods_name", nullable = false)
-    private String goodsName;
-
+    // DB: description (text)
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    // DB: image_url (varchar 500)
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    // DB: price (numeric 15,2)
     @Column(name = "price", nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
+    // DB: status (boolean, default true)
     @Column(name = "status")
     @Builder.Default
     private Boolean status = true;
-
-    @Column(name = "image_url", length = 500)
-    private String imageUrl;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

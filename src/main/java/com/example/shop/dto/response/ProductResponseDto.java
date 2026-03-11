@@ -12,15 +12,11 @@ import lombok.Getter;
 @Builder
 public class ProductResponseDto {
 
-
     private Long productId;
     private Long sellerId;
     private String sellerType;
-    private Long requesterId;
-    private String goodsType;
-    private String goodsName;
-    private String category;
-    private String title;
+    private String category;    // DB: category (product_category enum)
+    private String title;       // DB: title
     private String description;
     private String imageUrl;
     private BigDecimal price;
@@ -31,12 +27,11 @@ public class ProductResponseDto {
     public static ProductResponseDto fromEntity(Product product) {
         return ProductResponseDto.builder()
                 .productId(product.getProductId())
-                .requesterId(product.getRequesterId())
+                .sellerId(product.getSellerId())
                 .sellerType(product.getSellerType() != null ? product.getSellerType().name() : null)
-                .goodsType(product.getGoodsType() != null ? product.getGoodsType().name() : null)
-                .goodsName(product.getGoodsName())
+                .category(product.getCategory() != null ? product.getCategory().name() : null)
+                .title(product.getTitle())
                 .description(product.getDescription())
-                // 이미지 경로 처리
                 .imageUrl(product.getImageUrl() != null ? "/images/" + product.getImageUrl() : null)
                 .price(product.getPrice())
                 .status(product.getStatus())

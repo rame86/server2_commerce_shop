@@ -18,13 +18,14 @@ import lombok.extern.slf4j.Slf4j;
 public class RabbitMQConfig {
 
     public static final String EXCHANGE_NAME = "msa.direct.exchange";
-    public static final String ROUTING_KEY = "shop.request";
     public static final String QUEUE_NAME = "shop.request.queue";
+    public static final String ROUTING_KEY = "shop.request";
+    
     public static final String REPLY_ROUTING_KEY = "reply.shop.request";
     public static final String REPLY_QUEUE_NAME = "reply.shop.request.queue";
-    
-    public static final String SHOP_REQ_ROUTING_KEY= "shop.request";
-    
+
+    public static final String SHOP_REQ_ROUTING_KEY = "shop.request";
+
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(EXCHANGE_NAME);
@@ -67,6 +68,8 @@ public class RabbitMQConfig {
         // 클래스명(ConnectionFactory)이 아닌 주입받은 변수명(connectionFactory)을 사용
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(messageConverter());
+        // 메시지 미전달 시 확인을 위한 설정 (선택)
+        rabbitTemplate.setMandatory(true);
         return rabbitTemplate;
     }
 }
