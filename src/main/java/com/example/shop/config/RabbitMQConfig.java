@@ -22,7 +22,9 @@ public class RabbitMQConfig {
     public static final String QUEUE_NAME = "shop.request.queue";
     public static final String REPLY_ROUTING_KEY = "reply.shop.request";
     public static final String REPLY_QUEUE_NAME = "reply.shop.request.queue";
-
+    
+    public static final String SHOP_REQ_ROUTING_KEY= "shop.request";
+    
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(EXCHANGE_NAME);

@@ -18,7 +18,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// DB 스키마의 shop.product_variants 테이블과 매핑되는 상품 옵션(SKU) 엔티티
 @Entity
 @Table(name = "product_variants", schema = "shop")
 @Getter
@@ -27,33 +26,39 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ProductVariant extends BaseTimeEntity {
 
-    @Id // 옵션 고유 ID
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "variant_id")
+    @Column(name = "variant_id", columnDefinition = "uuid")
     private UUID variantId;
 
-    @ManyToOne(fetch = FetchType.LAZY) // N:1 연관관계 설정 (지연 로딩으로 성능 최적화)
+    // 부모 상품 참조 (지연 로딩)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    private Product product; // 부모 상품 데이터 참조
+    private Product product;
 
+    // 색상 옵션
     @Column(name = "color", length = 50)
-    private String color; // 색상 옵션
+    private String color;
 
+    // 사이즈 옵션
     @Column(name = "size", length = 50)
-    private String size; // 사이즈 옵션
+    private String size;
 
+    // 추가 금액
     @Column(name = "additional_price", precision = 15, scale = 2)
     @Builder.Default
-    private BigDecimal additionalPrice = BigDecimal.ZERO; // 기본가 외 추가로 붙는 금액
+    private BigDecimal additionalPrice = BigDecimal.ZERO;
 
+    // 재고 수량
     @Column(name = "stock_quantity", nullable = false)
     @Builder.Default
-    private Integer stockQuantity = 0; // 해당 옵션의 현재 재고 수량
+    private Integer stockQuantity = 0;
 
+    // 재고 식별 코드
     @Column(name = "sku_code", length = 100, unique = true)
-    private String skuCode; // 자체 관리용 재고 식별 코드
+    private String skuCode;
 
-    // 연관관계 편의 메서드를 위한 Setter
+    // 연관관계 편의 메서드
     public void setProduct(Product product) {
         this.product = product;
     }

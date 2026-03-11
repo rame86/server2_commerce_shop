@@ -11,17 +11,19 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 
-// 공통 생성/수정일자 관리 엔티티 (DB의 created_at, updated_at 자동 매핑)
+// 모든 엔티티에서 공통으로 사용하는 생성/수정 시간 자동 관리 클래스
 @Getter
-@MappedSuperclass // 테이블로 생성되지 않고 자식 엔티티에게 매핑 정보만 제공함
-@EntityListeners(AuditingEntityListener.class) // JPA Auditing(자동 시간 갱신) 활성화
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
 public abstract class BaseTimeEntity {
 
-    @CreatedDate // 데이터 생성 시점의 시간 자동 저장
+    // 데이터 최초 생성 시간 (이후 변경 불가)
+    @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @LastModifiedDate // 데이터 수정 시점의 시간 자동 갱신
+    // 데이터 최종 수정 시간
+    @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

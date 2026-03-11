@@ -1,10 +1,15 @@
 package com.example.shop.dto.request;
 
-import jakarta.validation.constraints.*;
 import lombok.Getter;
+import lombok.Setter;
 
-@Getter
+// 주문 항목 데이터
+@Getter @Setter
 public class OrderItemDto {
-    @NotBlank private String productId;
-    @Min(1) private int quantity;
+
+    // 주문할 상품 UUID
+    private Long productId;
+
+    // 주문 수량
+    private Integer quantity;
 }
