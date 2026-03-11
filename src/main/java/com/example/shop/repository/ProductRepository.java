@@ -8,6 +8,6 @@ import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductCategory;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    
-    List<Product> findByGoodsTypeAndStatusTrue(ProductCategory goodsType);
+
+    List<Product> findByCategoryAndStatusTrue(ProductCategory category);
 }
