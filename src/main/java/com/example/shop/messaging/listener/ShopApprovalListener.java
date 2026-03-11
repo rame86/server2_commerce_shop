@@ -18,23 +18,24 @@ public class ShopApprovalListener {
 
     private final ShopApprovalRepository shopApprovalRepository;
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
-    public void receiveApprovalMessage(ShopApprovalMessage message) {
-        log.info("승인 요청 메시지 수신: {}", message.goodsName());
+   @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
+public void receiveApprovalMessage(ShopApprovalMessage message) {
+    log.info("승인 요청 메시지 수신: {}", message.goodsName());
 
-        Approval approval = Approval.builder()
-                .goodsId(message.goodsId())
-                .requesterId(message.requesterId())
-                .requesterName(message.requesterName())
-                .goodsName(message.goodsName())
-                .goodsType(message.goodsType())
-                .description(message.description())
-                .price(message.price())
-                .stock(message.stock())
-                .imageUrl(message.imageUrl())
-                .build();
+    // 레코드에서 데이터를 추출하여 Approval 엔티티 생성
+    Approval approval = Approval.builder()
+            .goodsId(message.goodsId())        // Long
+            .requesterId(message.requesterId()) // Long
+            .requesterName(message.requesterName())
+            .goodsName(message.goodsName())
+            .goodsType(message.goodsType())
+            .description(message.description())
+            .price(message.price())
+            .stock(message.stock())
+            .imageUrl(message.imageUrl())
+            .build();
 
-        shopApprovalRepository.save(approval);
-        log.info("승인 요청 DB 저장 완료! approvalId: {}", approval.getApprovalId());
-    }
+    shopApprovalRepository.save(approval);
+    log.info("승인 요청 DB 저장 완료!");
+}
 }

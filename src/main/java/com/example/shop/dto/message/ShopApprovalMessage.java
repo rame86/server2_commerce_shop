@@ -1,5 +1,6 @@
 package com.example.shop.dto.message;
 
+
 public record ShopApprovalMessage(
     Long goodsId,
     Long requesterId,

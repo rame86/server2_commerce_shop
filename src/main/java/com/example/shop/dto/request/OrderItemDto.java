@@ -8,7 +8,7 @@ import lombok.Setter;
 public class OrderItemDto {
 
     // 주문할 상품 UUID
-    private String productId;
+    private Long productId;
 
     // 주문 수량
     private Integer quantity;

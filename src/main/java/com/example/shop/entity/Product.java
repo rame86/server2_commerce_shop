@@ -3,7 +3,6 @@ package com.example.shop.entity;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -30,9 +29,9 @@ import lombok.NoArgsConstructor;
 public class Product extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "product_id", columnDefinition = "uuid")
-    private UUID productId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "product_id")
+    private Long productId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "goods_type", nullable = false)
@@ -57,9 +56,9 @@ public class Product extends BaseTimeEntity {
     @Column(name = "price", nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "is_active")
+    @Column(name = "status")
     @Builder.Default
-    private Boolean isActive = true;
+    private Boolean status = true;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
@@ -74,6 +73,6 @@ public class Product extends BaseTimeEntity {
     }
 
     public void softDelete() {
-        this.isActive = false;
+        this.status = false;
     }
 }
