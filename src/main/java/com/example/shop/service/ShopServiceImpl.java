@@ -66,9 +66,14 @@ public class ShopServiceImpl implements ShopService {
         if (goodsType != null && !goodsType.isEmpty()) {
             ProductCategory productCategory = ProductCategory.valueOf(goodsType.toUpperCase());
             // status가 String이므로 category + status 조건으로 조회
-            return productRepository.findByCategoryAndStatus(productCategory, "ACTIVE").stream()
+            List<ProductResponseDto> result = productRepository.findByCategoryAndStatus(productCategory, "ACTIVE").stream()
                     .map(ProductResponseDto::fromEntity)
                     .collect(Collectors.toList());
+                log.info("[getProducts] 카테고리: {}, 조회된 상품 수: {}", goodsType, result.size());
+            if (log.isDebugEnabled()) {
+                result.forEach(product -> log.debug("상품 상세: ID={}, 제목={}", product.getProductId(), product.getTitle()));
+            }
+            return result;
         }
 
         return productRepository.findAll().stream()

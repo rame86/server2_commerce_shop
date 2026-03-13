@@ -4,5 +4,5 @@ package com.example.shop.entity;
 public enum ProductCategory {
     OFFICIAL,    // 공식 굿즈
     UNOFFICIAL,  // 팬메이드 굿즈
-    SECONDHAND   // 중고 굿즈
+    SECONDHAND;   // 중고 굿즈
 }
