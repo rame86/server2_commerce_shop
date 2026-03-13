@@ -1,18 +1,23 @@
 package com.example.shop.entity;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
 
-import jakarta.persistence.CascadeType;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import com.example.shop.entity.enums.ProductCategory;
+import com.example.shop.entity.enums.SellerType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -21,63 +26,47 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "products", schema = "shop")
+@Table(name = "products")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Product extends BaseTimeEntity {
+@EntityListeners(AuditingEntityListener.class) // 생성/수정 시간 자동 기록
+public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_id")
     private Long productId;
 
-    // DB: seller_id (bigint)
-    @Column(name = "seller_id")
+    @Column(nullable = false)
     private Long sellerId;
 
-    // DB: seller_type (enum)
     @Enumerated(EnumType.STRING)
-    @Column(name = "seller_type", nullable = false)
+    @Column(length = 20)
     private SellerType sellerType;
 
-    // DB: category (enum product_category)
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false)
+    @Column(name = "category", length = 50)
     private ProductCategory category;
 
-    // DB: title (varchar 255)
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(nullable = false, length = 255)
     private String title;
 
-    // DB: description (text)
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    // DB: image_url (varchar 500)
-    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    // DB: price (numeric 15,2)
-    @Column(name = "price", nullable = false, precision = 15, scale = 2)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
-    // DB: status (boolean, default true)
-    @Column(name = "status")
-    @Builder.Default
-    private Boolean status = true;
+    @Column(nullable = false, length = 20)
+    private String status; // 예: ACTIVE, PENDING, DELETED
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<ProductVariant> variants = new ArrayList<>();
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    public void addVariant(ProductVariant variant) {
-        this.variants.add(variant);
-        variant.setProduct(this);
-    }
-
-    public void softDelete() {
-        this.status = false;
-    }
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
 }

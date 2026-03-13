@@ -16,15 +16,16 @@ public enum ErrorCode {
     OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "재고가 부족합니다."),
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
     CANNOT_CANCEL_ORDER(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문입니다."),
-    
-    // [중요] 이미지 업로드 실패 시 사용할 코드 추가
+    CART_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니를 찾을 수 없습니다."),
+    CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니 상품을 찾을 수 없습니다."),
+    WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "찜목록 항목을 찾을 수 없습니다."),
     FILE_UPLOAD_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다.");
 
-    private final HttpStatus status; // HTTP 상태 코드 (200, 404, 500 등)
-    private final String message;     // 사용자에게 보여줄 메시지
+    private final HttpStatus status;
+    private final String message;
 
-    ErrorCode(HttpStatus s, String m) { 
-        this.status = s; 
-        this.message = m; 
+    ErrorCode(HttpStatus s, String m) {
+        this.status = s;
+        this.message = m;
     }
 }

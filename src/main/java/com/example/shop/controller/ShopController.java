@@ -2,16 +2,15 @@ package com.example.shop.controller;
 
 import java.util.List;
 
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.shop.dto.response.ProductResponseDto;
+import com.example.shop.dto.response.ProductResponseDTO;
 import com.example.shop.service.ShopService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,26 +21,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class ShopController {
-
-    private final StringRedisTemplate stringRedisTemplate;
-
+    
     private final ShopService shopService; // Repository 대신 Service 주입
 
     @GetMapping("/")
-    public List<ProductResponseDto> list() {
-        // 기본값으로 0페이지, 10개씩 조회하도록 수정
-        return shopService.getProducts(null, null, 0, 10);
+    public List<ProductResponseDTO> list() {
+        log.info("----------> /shop/list 요청 받음");
+        return shopService.getProducts();
     }
 
-    @GetMapping("/detail")
-    public ProductResponseDto detail(
-            @RequestParam(value = "product_id", required = false) String product_id) {
-        if (product_id == null) {
-            // 파라미터가 없을 때의 예외 처리 로직 (예: 기본 상품 반환 또는 커스텀 에러)
-            log.warn("product_id가 전달되지 않았습니다.");
-            return null;
-        }
-        return shopService.getProduct(product_id);
+    @GetMapping("/detail/{productId}")
+    public ProductResponseDTO detail(@PathVariable(name = "productId") String productId) { // name 명시
+        log.info("상품 상세 조회 요청 - ID: {}", productId);
+        return shopService.getProduct(productId);
     }
 
     @GetMapping("/userTestLua")
@@ -79,7 +71,7 @@ public class ShopController {
     public String cartlist() {
         return "장바구니목록 요청받음";
     }
-    
+
     @DeleteMapping("/Cart")
     public String deleteCart() {
         return "장바구니 상품 삭제";

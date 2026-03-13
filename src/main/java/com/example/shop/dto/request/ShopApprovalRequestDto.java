@@ -14,7 +14,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Builder
 @ToString
-public class ShopApprovalRequestDto {
+public class ShopApprovalRequestDTO {
 
     @NotNull(message = "굿즈상품 ID는 필수입니다.")
     private Long goodsId;

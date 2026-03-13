@@ -3,6 +3,8 @@ package com.example.shop.entity;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
+import com.example.shop.entity.enums.ProductCategory;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
