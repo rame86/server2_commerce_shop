@@ -63,10 +63,10 @@ public class Product extends BaseTimeEntity {
     @Column(name = "price", nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
-    // DB: status (boolean, default true)
+    // DB: status (String, default true)
     @Column(name = "status")
     @Builder.Default
-    private Boolean status = true;
+    private String status = "PENDING";
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -78,6 +78,6 @@ public class Product extends BaseTimeEntity {
     }
 
     public void softDelete() {
-        this.status = false;
+        this.status = "FAILED";
     }
 }

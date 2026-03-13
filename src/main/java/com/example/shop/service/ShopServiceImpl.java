@@ -18,18 +18,26 @@ import com.example.shop.dto.message.ShopApprovalMessage;
 import com.example.shop.dto.request.OrderCreateRequestDto;
 import com.example.shop.dto.request.OrderItemDto;
 import com.example.shop.dto.request.ProductCreateRequestDto;
+import com.example.shop.dto.response.CartResponseDto;
 import com.example.shop.dto.response.OrderResponseDto;
 import com.example.shop.dto.response.ProductResponseDto;
+import com.example.shop.dto.response.WishlistResponseDto;
 import com.example.shop.entity.Approval;
+import com.example.shop.entity.Cart;
+import com.example.shop.entity.CartItem;
 import com.example.shop.entity.Order;
 import com.example.shop.entity.OrderItem;
 import com.example.shop.entity.OrderStatus;
 import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductCategory;
+import com.example.shop.entity.Wishlist;
 import com.example.shop.messaging.producer.ProductMessageProducer;
+import com.example.shop.repository.CartItemRepository;
+import com.example.shop.repository.CartRepository;
 import com.example.shop.repository.OrderRepository;
 import com.example.shop.repository.ProductRepository;
 import com.example.shop.repository.ShopApprovalRepository;
+import com.example.shop.repository.WishlistRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +51,9 @@ public class ShopServiceImpl implements ShopService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final ShopApprovalRepository shopApprovalRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
+    private final WishlistRepository wishlistRepository;
 
     @Value("${file.upload.dir:D:/shop/images/}")
     private String uploadPath;
@@ -54,13 +65,14 @@ public class ShopServiceImpl implements ShopService {
     public List<ProductResponseDto> getProducts(String goodsType, Long requesterId, int page, int size) {
         if (goodsType != null && !goodsType.isEmpty()) {
             ProductCategory productCategory = ProductCategory.valueOf(goodsType.toUpperCase());
-            return productRepository.findByCategoryAndStatusTrue(productCategory).stream()
+            // status가 String이므로 category + status 조건으로 조회
+            return productRepository.findByCategoryAndStatus(productCategory, "ACTIVE").stream()
                     .map(ProductResponseDto::fromEntity)
                     .collect(Collectors.toList());
         }
 
         return productRepository.findAll().stream()
-                .filter(Product::getStatus)
+                .filter(p -> "ACTIVE".equals(p.getStatus()))  // PENDING → ACTIVE 수정
                 .map(ProductResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -73,10 +85,6 @@ public class ShopServiceImpl implements ShopService {
         return ProductResponseDto.fromEntity(product);
     }
 
-    /**
-     * 상품 등록 요청 → product_approvals에 저장 후 RabbitMQ 전송
-     * 실제 products 저장은 승인 완료 후 별도 처리
-     */
     @Override
     @Transactional
     public ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto,
@@ -126,7 +134,7 @@ public class ShopServiceImpl implements ShopService {
 
         // 5. RabbitMQ 승인 요청 전송
         productMessageProducer.sendProductCreatedEvent(new ShopApprovalMessage(
-                savedApproval.getApprovalId(), // null 대신 실제 DB에 저장된 ID 전달
+                savedApproval.getApprovalId(),
                 savedApproval.getRequesterId(),
                 savedApproval.getRequesterName(),
                 savedApproval.getGoodsName(),
@@ -136,14 +144,14 @@ public class ShopServiceImpl implements ShopService {
                 totalStock,
                 savedApproval.getImageUrl()));
 
-        // 6. 임시 응답 반환 (아직 Product 없음)
+        // 6. 임시 응답 반환 (승인 전이므로 PENDING)
         return ProductResponseDto.builder()
                 .category(savedApproval.getGoodsType().name())
                 .title(savedApproval.getGoodsName())
                 .description(savedApproval.getDescription())
                 .price(savedApproval.getPrice() != null ? BigDecimal.valueOf(savedApproval.getPrice()) : null)
                 .imageUrl(savedApproval.getImageUrl() != null ? "/images/" + savedApproval.getImageUrl() : null)
-                .status(false)
+                .status("PENDING")
                 .build();
     }
 
@@ -167,6 +175,8 @@ public class ShopServiceImpl implements ShopService {
         Order order = Order.builder()
                 .memberId(memberId)
                 .shippingAddress(requestDto.getShippingAddress())
+                .recipientName(requestDto.getRecipientName())
+                .recipientPhone(requestDto.getRecipientPhone())
                 .status(OrderStatus.PENDING)
                 .build();
 
@@ -186,8 +196,7 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponseDto> getMyOrders(Long memberId, int page, int size) {
-        return orderRepository.findAll().stream()
-                .filter(o -> o.getMemberId().equals(memberId))
+        return orderRepository.findByMemberId(memberId).stream()
                 .map(OrderResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -209,6 +218,91 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
         if (!order.getMemberId().equals(memberId))
             throw new BusinessException(ErrorCode.FORBIDDEN);
-        return OrderResponseDto.fromEntity(order);
+        order.cancel("사용자 요청으로 취소");
+        return OrderResponseDto.fromEntity(orderRepository.save(order));
+    }
+
+    // ======================== 장바구니 관련 ========================
+
+    @Override
+    @Transactional(readOnly = true)
+    public CartResponseDto getCart(Long memberId) {
+        Cart cart = cartRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+        return CartResponseDto.fromEntity(cart);
+    }
+
+    @Override
+    @Transactional
+    public CartResponseDto addToCart(Long memberId, Long productId, int quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        // 장바구니 없으면 새로 생성
+        Cart cart = cartRepository.findByMemberId(memberId)
+                .orElseGet(() -> cartRepository.save(Cart.builder().memberId(memberId).build()));
+
+        // 이미 담긴 상품이면 수량만 증가, 없으면 새 아이템 추가
+        cartItemRepository.findByCart_CartIdAndProduct_ProductId(cart.getCartId(), productId)
+                .ifPresentOrElse(
+                        item -> item.updateQuantity(item.getQuantity() + quantity),
+                        () -> {
+                            CartItem newItem = CartItem.builder()
+                                    .product(product)
+                                    .quantity(quantity)
+                                    .build();
+                            cart.addItem(newItem);
+                        });
+
+        return CartResponseDto.fromEntity(cartRepository.save(cart));
+    }
+
+    @Override
+    @Transactional
+    public CartResponseDto removeFromCart(Long memberId, Long cartItemId) {
+        Cart cart = cartRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+
+        CartItem item = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND));
+
+        cart.removeItem(item);
+        return CartResponseDto.fromEntity(cartRepository.save(cart));
+    }
+
+    // ======================== 찜목록 관련 ========================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WishlistResponseDto> getWishlist(Long memberId) {
+        return wishlistRepository.findByMemberId(memberId).stream()
+                .map(WishlistResponseDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public WishlistResponseDto addToWishlist(Long memberId, Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        // 이미 찜한 상품이면 그대로 반환
+        return wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
+                .map(WishlistResponseDto::fromEntity)
+                .orElseGet(() -> {
+                    Wishlist wishlist = Wishlist.builder()
+                            .memberId(memberId)
+                            .product(product)
+                            .build();
+                    return WishlistResponseDto.fromEntity(wishlistRepository.save(wishlist));
+                });
+    }
+
+    @Override
+    @Transactional
+    public void removeFromWishlist(Long memberId, Long productId) {
+        Wishlist wishlist = wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.WISHLIST_NOT_FOUND));
+        wishlistRepository.delete(wishlist);
     }
 }

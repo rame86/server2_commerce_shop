@@ -9,5 +9,5 @@ import com.example.shop.entity.ProductCategory;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    List<Product> findByCategoryAndStatusTrue(ProductCategory category);
+   List<Product> findByCategoryAndStatus(ProductCategory category, String status);
 }

@@ -29,7 +29,6 @@ public class ShopController {
 
     @GetMapping("/")
     public List<ProductResponseDto> list() {
-        // 기본값으로 0페이지, 10개씩 조회하도록 수정
         return shopService.getProducts(null, null, 0, 10);
     }
 
@@ -79,7 +78,7 @@ public class ShopController {
     public String cartlist() {
         return "장바구니목록 요청받음";
     }
-    
+
     @DeleteMapping("/Cart")
     public String deleteCart() {
         return "장바구니 상품 삭제";

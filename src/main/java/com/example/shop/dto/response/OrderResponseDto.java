@@ -1,13 +1,12 @@
 package com.example.shop.dto.response;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.example.shop.entity.Order;
 import com.example.shop.entity.OrderItem;
-import com.example.shop.entity.Product;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -16,7 +15,7 @@ import lombok.Getter;
 @Builder
 public class OrderResponseDto {
 
-    private UUID orderId;
+    private String orderId;
     private Long memberId;
     private String shippingAddress;
     private String recipientName;
@@ -25,11 +24,37 @@ public class OrderResponseDto {
     private String status;
     private String trackingNumber;
     private String cancelReason;
-    private List<OrderItemResponseDto> items;
+    private List<OrderItemDto> orderItems;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    @Getter
+    @Builder
+    public static class OrderItemDto {
+        private String orderItemId;
+        private Long productId;
+        private String title;
+        private String imageUrl;
+        private Integer quantity;
+        private BigDecimal unitPrice;
+        private BigDecimal subtotal;
+
+        public static OrderItemDto fromEntity(OrderItem item) {
+            return OrderItemDto.builder()
+                    .orderItemId(item.getOrderItemId().toString())
+                    .productId(item.getProduct().getProductId())
+                    .title(item.getProduct().getTitle())
+                    .imageUrl(item.getProduct().getImageUrl() != null ? "/images/" + item.getProduct().getImageUrl() : null)
+                    .quantity(item.getQuantity())
+                    .unitPrice(item.getUnitPrice())
+                    .subtotal(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .build();
+        }
+    }
 
     public static OrderResponseDto fromEntity(Order order) {
         return OrderResponseDto.builder()
-                .orderId(order.getOrderId())
+                .orderId(order.getOrderId().toString())
                 .memberId(order.getMemberId())
                 .shippingAddress(order.getShippingAddress())
                 .recipientName(order.getRecipientName())
@@ -38,30 +63,11 @@ public class OrderResponseDto {
                 .status(order.getStatus().name())
                 .trackingNumber(order.getTrackingNumber())
                 .cancelReason(order.getCancelReason())
-                .items(order.getOrderItems().stream()
-                        .map(OrderItemResponseDto::fromEntity)
+                .orderItems(order.getOrderItems().stream()
+                        .map(OrderItemDto::fromEntity)
                         .collect(Collectors.toList()))
+                .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
                 .build();
-    }
-
-    @Getter
-    @Builder
-    public static class OrderItemResponseDto {
-        private UUID orderItemId;
-        private Long productId;
-        private String title;       // goodsName → title (DB 기준)
-        private Integer quantity;
-        private BigDecimal unitPrice;
-
-        public static OrderItemResponseDto fromEntity(OrderItem item) {
-            Product product = item.getProduct();
-            return OrderItemResponseDto.builder()
-                    .orderItemId(item.getOrderItemId())
-                    .productId(product.getProductId())
-                    .title(product.getTitle())  // getGoodsName() → getTitle()
-                    .quantity(item.getQuantity())
-                    .unitPrice(item.getUnitPrice())
-                    .build();
-        }
     }
 }

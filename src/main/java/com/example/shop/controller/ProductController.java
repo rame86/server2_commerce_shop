@@ -30,10 +30,6 @@ public class ProductController {
     /*************************************************************/
     // 공통사용
     /*************************************************************/
-    @GetMapping("/")
-    public String product() {
-        return "굿즈 전체목록 받음";
-    }
 
     /**
      * [공식 굿즈 목록 조회]
@@ -67,10 +63,12 @@ public class ProductController {
     public ProductResponseDto createOfficial(
             @RequestPart("data") ProductCreateRequestDto requestDto, // 텍스트/JSON 데이터 부분
             @RequestPart(value = "image", required = false) MultipartFile image) { // 업로드된 이미지 파일 부분
-        
-        // 실제 운영 환경에서는 로그인 정보(SecurityContext)에서 memberId를 뽑아야 하지만, 현재는 테스트용으로 1L(관리자) 전달
+
+        // 실제 운영 환경에서는 로그인 정보(SecurityContext)에서 memberId를 뽑아야 하지만, 현재는 테스트용으로 1L(관리자)
+        // 전달
         return shopService.createProduct(1L, "ADMIN", requestDto, image);
     }
+
     /**
      * [공식 굿즈 삭제]
      * DELETE /product/official/{productId}
@@ -92,7 +90,7 @@ public class ProductController {
     public ProductResponseDto createSecondhand(
             @RequestPart("data") ProductCreateRequestDto requestDto,
             @RequestPart(value = "image", required = false) MultipartFile image) {
-        
+
         // 테스트용으로 일반 사용자(2L, USER) 권한으로 상품을 등록함
         return shopService.createProduct(2L, "USER", requestDto, image);
     }

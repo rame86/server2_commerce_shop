@@ -20,7 +20,7 @@ public class ProductResponseDto {
     private String description;
     private String imageUrl;
     private BigDecimal price;
-    private Boolean status;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
