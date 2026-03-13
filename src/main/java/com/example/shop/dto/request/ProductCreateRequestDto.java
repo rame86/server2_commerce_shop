@@ -1,14 +1,26 @@
 package com.example.shop.dto.request;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter @Setter
 public class ProductCreateRequestDto {
-    private String productName;
-    private String productDetail; // ← 이게 없어서 에러가 났던 겁니다. 추가하세요!
+    private String goodsName;
+    private String description;
     private BigDecimal price;
-    private String category;
+    private String goodsType;
+    private String requesterName;
+    private List<VariantDto> variants;
+
+    @Getter @Setter
+    public static class VariantDto {
+        private String color;
+        private String size;
+        private BigDecimal additionalPrice;
+        private Integer stockQuantity;
+        private String skuCode;
+    }
 }

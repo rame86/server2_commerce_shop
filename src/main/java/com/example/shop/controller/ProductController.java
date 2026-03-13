@@ -30,17 +30,13 @@ public class ProductController {
     /*************************************************************/
     // 공통사용
     /*************************************************************/
-    @GetMapping("/")
-    public String product() {
-        return "굿즈 전체목록 받음";
-    }
 
     /**
      * [공식 굿즈 목록 조회]
      * GET /product/official
      */
     @GetMapping("/official")
-    public List<ProductResponseDto> officialMerchandise() {
+    public List<ProductResponseDto> official() {
         // category를 "official"로 필터링하여 서비스에 상품 목록을 요청함
         return shopService.getProducts("official", null, 0, 10);
     }
@@ -51,14 +47,14 @@ public class ProductController {
     }
 
     @GetMapping("/unofficial")
-    public String fanmade() {
-        return "팬메이드굿즈 목록 받음";
+    public List<ProductResponseDto> fanmade() {
+        return shopService.getProducts("unofficial", null, 0, 10);
     }
 
     /*************************************************************/
     // 관리자
     /*************************************************************/
- /**
+    /**
      * [공식 굿즈 등록 - 관리자 전용]
      * POST /product/official
      * consumes = MediaType.MULTIPART_FORM_DATA_VALUE: JSON 데이터와 파일을 동시에 받기 위한 설정
@@ -67,11 +63,13 @@ public class ProductController {
     public ProductResponseDto createOfficial(
             @RequestPart("data") ProductCreateRequestDto requestDto, // 텍스트/JSON 데이터 부분
             @RequestPart(value = "image", required = false) MultipartFile image) { // 업로드된 이미지 파일 부분
-        
-        // 실제 운영 환경에서는 로그인 정보(SecurityContext)에서 memberId를 뽑아야 하지만, 현재는 테스트용으로 1L(관리자) 전달
+
+        // 실제 운영 환경에서는 로그인 정보(SecurityContext)에서 memberId를 뽑아야 하지만, 현재는 테스트용으로 1L(관리자)
+        // 전달
         return shopService.createProduct(1L, "ADMIN", requestDto, image);
     }
-   /**
+
+    /**
      * [공식 굿즈 삭제]
      * DELETE /product/official/{productId}
      */
@@ -92,7 +90,7 @@ public class ProductController {
     public ProductResponseDto createSecondhand(
             @RequestPart("data") ProductCreateRequestDto requestDto,
             @RequestPart(value = "image", required = false) MultipartFile image) {
-        
+
         // 테스트용으로 일반 사용자(2L, USER) 권한으로 상품을 등록함
         return shopService.createProduct(2L, "USER", requestDto, image);
     }

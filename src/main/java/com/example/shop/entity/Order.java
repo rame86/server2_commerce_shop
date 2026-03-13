@@ -23,37 +23,79 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "orders", schema = "shop")
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor @Builder
-public class Order {
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+public class Order extends BaseTimeEntity {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "order_id", columnDefinition = "uuid")
     private UUID orderId;
 
+    // 주문자 ID
+    @Column(name = "member_id", nullable = false)
     private Long memberId;
-    
-    @Column(precision = 15, scale = 2)
-    private BigDecimal totalAmount;
-    
+
+    // 배송지 주소
+    @Column(name = "shipping_address", nullable = false)
     private String shippingAddress;
 
+    // 수령인 이름
+    @Column(name = "recipient_name")
+    private String recipientName;
+
+    // 수령인 연락처
+    @Column(name = "recipient_phone")
+    private String recipientPhone;
+
+    // 주문 총 금액
+    @Column(name = "total_price", precision = 15, scale = 2)
+    private BigDecimal totalPrice;
+
+    // 주문 상태 (PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED)
     @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
 
+    // 배송 추적 번호
+    @Column(name = "tracking_number", length = 100)
+    private String trackingNumber;
+
+    // 취소 사유
+    @Column(name = "cancel_reason", columnDefinition = "TEXT")
+    private String cancelReason;
+
+    // 주문 항목 리스트
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<OrderItem> items = new ArrayList<>();
+    private List<OrderItem> orderItems = new ArrayList<>();
 
-    // 편의 메서드: 주문 금액 자동 계산 및 연관관계 설정
-    public void addOrderItem(OrderItem item) {
-        this.items.add(item);
-        item.setOrder(this);
-        calculateTotalAmount();
-    }
-
-    private void calculateTotalAmount() {
-        this.totalAmount = items.stream()
+    // 주문 항목 추가 편의 메서드
+    public void addOrderItem(OrderItem orderItem) {
+        this.orderItems.add(orderItem);
+        orderItem.setOrder(this);
+        // 총 금액 재계산
+        this.totalPrice = this.orderItems.stream()
                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // 주문 상태 변경 메서드
+    public void updateStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    // 배송 추적 번호 등록 메서드
+    public void updateTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
+        this.status = OrderStatus.SHIPPING;
+    }
+
+    // 주문 취소 메서드
+    public void cancel(String cancelReason) {
+        this.status = OrderStatus.CANCELLED;
+        this.cancelReason = cancelReason;
     }
 }
