@@ -12,7 +12,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class CartResponseDto {
+public class CartResponseDTO {
 
     private Long cartId;
     private Long memberId;
@@ -43,7 +43,7 @@ public class CartResponseDto {
         }
     }
 
-    public static CartResponseDto fromEntity(Cart cart) {
+    public static CartResponseDTO fromEntity(Cart cart) {
         List<CartItemDto> items = cart.getCartItems().stream()
                 .map(CartItemDto::fromEntity)
                 .collect(Collectors.toList());
@@ -52,7 +52,7 @@ public class CartResponseDto {
                 .map(CartItemDto::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return CartResponseDto.builder()
+        return CartResponseDTO.builder()
                 .cartId(cart.getCartId())
                 .memberId(cart.getMemberId())
                 .items(items)

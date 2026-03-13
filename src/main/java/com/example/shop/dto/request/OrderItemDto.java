@@ -5,7 +5,7 @@ import lombok.Setter;
 
 // 주문 항목 데이터
 @Getter @Setter
-public class OrderItemDto {
+public class OrderItemDTO {
 
     // 주문할 상품 UUID
     private Long productId;

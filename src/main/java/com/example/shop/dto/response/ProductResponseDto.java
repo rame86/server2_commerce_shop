@@ -10,7 +10,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class ProductResponseDto {
+public class ProductResponseDTO {
 
     private Long productId;
     private Long sellerId;
@@ -24,15 +24,16 @@ public class ProductResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static ProductResponseDto fromEntity(Product product) {
-        return ProductResponseDto.builder()
+    public static ProductResponseDTO fromEntity(Product product) {
+        return ProductResponseDTO.builder()
                 .productId(product.getProductId())
                 .sellerId(product.getSellerId())
                 .sellerType(product.getSellerType() != null ? product.getSellerType().name() : null)
                 .category(product.getCategory() != null ? product.getCategory().name() : null)
                 .title(product.getTitle())
                 .description(product.getDescription())
-                .imageUrl(product.getImageUrl() != null ? "/images/" + product.getImageUrl() : null)
+                // .imageUrl(product.getImageUrl() != null ? "/images/" + product.getImageUrl() : null) //배포시 해당 내용으로 수정
+                .imageUrl(product.getImageUrl() != null ? "" + product.getImageUrl() : null)
                 .price(product.getPrice())
                 .status(product.getStatus())
                 .createdAt(product.getCreatedAt())

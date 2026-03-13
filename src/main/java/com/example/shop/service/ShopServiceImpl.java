@@ -15,13 +15,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
 import com.example.shop.dto.message.ShopApprovalMessage;
-import com.example.shop.dto.request.OrderCreateRequestDto;
-import com.example.shop.dto.request.OrderItemDto;
-import com.example.shop.dto.request.ProductCreateRequestDto;
-import com.example.shop.dto.response.CartResponseDto;
-import com.example.shop.dto.response.OrderResponseDto;
-import com.example.shop.dto.response.ProductResponseDto;
-import com.example.shop.dto.response.WishlistResponseDto;
+import com.example.shop.dto.request.OrderCreateRequestDTO;
+import com.example.shop.dto.request.OrderItemDTO;
+import com.example.shop.dto.request.ProductCreateRequestDTO;
+import com.example.shop.dto.response.CartResponseDTO;
+import com.example.shop.dto.response.OrderResponseDTO;
+import com.example.shop.dto.response.ProductResponseDTO;
+import com.example.shop.dto.response.WishlistResponseDTO;
 import com.example.shop.entity.Approval;
 import com.example.shop.entity.Cart;
 import com.example.shop.entity.CartItem;
@@ -29,11 +29,11 @@ import com.example.shop.entity.Order;
 import com.example.shop.entity.OrderItem;
 import com.example.shop.entity.OrderStatus;
 import com.example.shop.entity.Product;
-import com.example.shop.entity.ProductCategory;
 import com.example.shop.entity.Wishlist;
+import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.messaging.producer.ProductMessageProducer;
-import com.example.shop.repository.CartItemRepository;
 import com.example.shop.repository.CartRepository;
+import com.example.shop.repository.CartitemRepository;
 import com.example.shop.repository.OrderRepository;
 import com.example.shop.repository.ProductRepository;
 import com.example.shop.repository.ShopApprovalRepository;
@@ -52,7 +52,7 @@ public class ShopServiceImpl implements ShopService {
     private final OrderRepository orderRepository;
     private final ShopApprovalRepository shopApprovalRepository;
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
+    private final CartitemRepository cartItemRepository;
     private final WishlistRepository wishlistRepository;
 
     @Value("${file.upload.dir:D:/shop/images/}")
@@ -62,37 +62,28 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProductResponseDto> getProducts(String goodsType, Long requesterId, int page, int size) {
-        if (goodsType != null && !goodsType.isEmpty()) {
-            ProductCategory productCategory = ProductCategory.valueOf(goodsType.toUpperCase());
-            // status가 String이므로 category + status 조건으로 조회
-            List<ProductResponseDto> result = productRepository.findByCategoryAndStatus(productCategory, "ACTIVE").stream()
-                    .map(ProductResponseDto::fromEntity)
-                    .collect(Collectors.toList());
-                log.info("[getProducts] 카테고리: {}, 조회된 상품 수: {}", goodsType, result.size());
-            if (log.isDebugEnabled()) {
-                result.forEach(product -> log.debug("상품 상세: ID={}, 제목={}", product.getProductId(), product.getTitle()));
-            }
-            return result;
-        }
+    public List<ProductResponseDTO> getProducts() {
+        // 1. DB에서 상태가 "ACTIVE"인 상품만 조회
+        // 2. Stream을 사용하여 DTO로 변환
 
-        return productRepository.findAll().stream()
-                .filter(p -> "ACTIVE".equals(p.getStatus()))  // PENDING → ACTIVE 수정
-                .map(ProductResponseDto::fromEntity)
+        log.info("----------> /shop/list 요청 받음");
+        return productRepository.findByStatus("ACTIVE")
+                .stream()
+                .map(ProductResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ProductResponseDto getProduct(String productId) {
+    public ProductResponseDTO getProduct(String productId) {
         Product product = productRepository.findById(Long.valueOf(productId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        return ProductResponseDto.fromEntity(product);
+        return ProductResponseDTO.fromEntity(product);
     }
 
     @Override
     @Transactional
-    public ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto,
+    public ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto,
             MultipartFile imageFile) {
 
         // 1. 이미지 파일 저장
@@ -150,12 +141,13 @@ public class ShopServiceImpl implements ShopService {
                 savedApproval.getImageUrl()));
 
         // 6. 임시 응답 반환 (승인 전이므로 PENDING)
-        return ProductResponseDto.builder()
+        return ProductResponseDTO.builder()
                 .category(savedApproval.getGoodsType().name())
                 .title(savedApproval.getGoodsName())
                 .description(savedApproval.getDescription())
                 .price(savedApproval.getPrice() != null ? BigDecimal.valueOf(savedApproval.getPrice()) : null)
-                .imageUrl(savedApproval.getImageUrl() != null ? "/images/" + savedApproval.getImageUrl() : null)
+                .imageUrl(savedApproval.getImageUrl() != null ? ""+ savedApproval.getImageUrl() : null)
+                // .imageUrl(savedApproval.getImageUrl() != null ? "/images/" + savedApproval.getImageUrl() : null) //배포시 해당내용으로 수정
                 .status("PENDING")
                 .build();
     }
@@ -169,14 +161,14 @@ public class ShopServiceImpl implements ShopService {
         if (!product.getSellerId().equals(memberId))
             throw new BusinessException(ErrorCode.FORBIDDEN);
 
-        product.softDelete();
+        // product.softDelete();
     }
 
     // ======================== 주문 관련 ========================
 
     @Override
     @Transactional
-    public OrderResponseDto createOrder(Long memberId, OrderCreateRequestDto requestDto) {
+    public OrderResponseDTO createOrder(Long memberId, OrderCreateRequestDTO requestDto) {
         Order order = Order.builder()
                 .memberId(memberId)
                 .shippingAddress(requestDto.getShippingAddress())
@@ -185,7 +177,7 @@ public class ShopServiceImpl implements ShopService {
                 .status(OrderStatus.PENDING)
                 .build();
 
-        for (OrderItemDto itemDto : requestDto.getItems()) {
+        for (OrderItemDTO itemDto : requestDto.getItems()) {
             Product product = productRepository.findById(Long.valueOf(itemDto.getProductId()))
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -195,51 +187,51 @@ public class ShopServiceImpl implements ShopService {
                     .unitPrice(product.getPrice())
                     .build());
         }
-        return OrderResponseDto.fromEntity(orderRepository.save(order));
+        return OrderResponseDTO.fromEntity(orderRepository.save(order));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponseDto> getMyOrders(Long memberId, int page, int size) {
+    public List<OrderResponseDTO> getMyOrders(Long memberId, int page, int size) {
         return orderRepository.findByMemberId(memberId).stream()
-                .map(OrderResponseDto::fromEntity)
+                .map(OrderResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public OrderResponseDto getOrder(Long memberId, String orderId) {
+    public OrderResponseDTO getOrder(Long memberId, String orderId) {
         Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
         if (!order.getMemberId().equals(memberId))
             throw new BusinessException(ErrorCode.FORBIDDEN);
-        return OrderResponseDto.fromEntity(order);
+        return OrderResponseDTO.fromEntity(order);
     }
 
     @Override
     @Transactional
-    public OrderResponseDto cancelOrder(Long memberId, String orderId) {
+    public OrderResponseDTO cancelOrder(Long memberId, String orderId) {
         Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
         if (!order.getMemberId().equals(memberId))
             throw new BusinessException(ErrorCode.FORBIDDEN);
         order.cancel("사용자 요청으로 취소");
-        return OrderResponseDto.fromEntity(orderRepository.save(order));
+        return OrderResponseDTO.fromEntity(orderRepository.save(order));
     }
 
     // ======================== 장바구니 관련 ========================
 
     @Override
     @Transactional(readOnly = true)
-    public CartResponseDto getCart(Long memberId) {
+    public CartResponseDTO getCart(Long memberId) {
         Cart cart = cartRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
-        return CartResponseDto.fromEntity(cart);
+        return CartResponseDTO.fromEntity(cart);
     }
 
     @Override
     @Transactional
-    public CartResponseDto addToCart(Long memberId, Long productId, int quantity) {
+    public CartResponseDTO addToCart(Long memberId, Long productId, int quantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -259,12 +251,12 @@ public class ShopServiceImpl implements ShopService {
                             cart.addItem(newItem);
                         });
 
-        return CartResponseDto.fromEntity(cartRepository.save(cart));
+        return CartResponseDTO.fromEntity(cartRepository.save(cart));
     }
 
     @Override
     @Transactional
-    public CartResponseDto removeFromCart(Long memberId, Long cartItemId) {
+    public CartResponseDTO removeFromCart(Long memberId, Long cartItemId) {
         Cart cart = cartRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
 
@@ -272,34 +264,34 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND));
 
         cart.removeItem(item);
-        return CartResponseDto.fromEntity(cartRepository.save(cart));
+        return CartResponseDTO.fromEntity(cartRepository.save(cart));
     }
 
     // ======================== 찜목록 관련 ========================
 
     @Override
     @Transactional(readOnly = true)
-    public List<WishlistResponseDto> getWishlist(Long memberId) {
+    public List<WishlistResponseDTO> getWishlist(Long memberId) {
         return wishlistRepository.findByMemberId(memberId).stream()
-                .map(WishlistResponseDto::fromEntity)
+                .map(WishlistResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public WishlistResponseDto addToWishlist(Long memberId, Long productId) {
+    public WishlistResponseDTO addToWishlist(Long memberId, Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
         // 이미 찜한 상품이면 그대로 반환
         return wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
-                .map(WishlistResponseDto::fromEntity)
+                .map(WishlistResponseDTO::fromEntity)
                 .orElseGet(() -> {
                     Wishlist wishlist = Wishlist.builder()
                             .memberId(memberId)
                             .product(product)
                             .build();
-                    return WishlistResponseDto.fromEntity(wishlistRepository.save(wishlist));
+                    return WishlistResponseDTO.fromEntity(wishlistRepository.save(wishlist));
                 });
     }
 

@@ -13,7 +13,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class OrderResponseDto {
+public class OrderResponseDTO {
 
     private String orderId;
     private Long memberId;
@@ -52,8 +52,8 @@ public class OrderResponseDto {
         }
     }
 
-    public static OrderResponseDto fromEntity(Order order) {
-        return OrderResponseDto.builder()
+    public static OrderResponseDTO fromEntity(Order order) {
+        return OrderResponseDTO.builder()
                 .orderId(order.getOrderId().toString())
                 .memberId(order.getMemberId())
                 .shippingAddress(order.getShippingAddress())

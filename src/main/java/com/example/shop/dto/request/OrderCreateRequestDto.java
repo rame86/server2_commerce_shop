@@ -7,7 +7,7 @@ import lombok.Setter;
 
 // 주문 생성 시 클라이언트로부터 받는 요청 데이터
 @Getter @Setter
-public class OrderCreateRequestDto {
+public class OrderCreateRequestDTO {
 
     // 배송지 주소
     private String shippingAddress;
@@ -19,5 +19,5 @@ public class OrderCreateRequestDto {
     private String recipientPhone;
 
     // 주문 항목 리스트
-    private List<OrderItemDto> items;
+    private List<OrderItemDTO> items;
 }

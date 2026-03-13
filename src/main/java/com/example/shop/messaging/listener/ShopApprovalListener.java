@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import com.example.shop.config.RabbitMQConfig;
 import com.example.shop.dto.message.ShopApprovalMessage;
 import com.example.shop.entity.Approval;
-import com.example.shop.entity.ProductCategory;
+import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.repository.ShopApprovalRepository;
 
 import lombok.RequiredArgsConstructor;

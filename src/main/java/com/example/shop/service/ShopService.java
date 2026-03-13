@@ -4,48 +4,48 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.shop.dto.request.OrderCreateRequestDto;
-import com.example.shop.dto.request.ProductCreateRequestDto;
-import com.example.shop.dto.response.CartResponseDto;
-import com.example.shop.dto.response.OrderResponseDto;
-import com.example.shop.dto.response.ProductResponseDto;
-import com.example.shop.dto.response.WishlistResponseDto;
+import com.example.shop.dto.request.OrderCreateRequestDTO;
+import com.example.shop.dto.request.ProductCreateRequestDTO;
+import com.example.shop.dto.response.CartResponseDTO;
+import com.example.shop.dto.response.OrderResponseDTO;
+import com.example.shop.dto.response.ProductResponseDTO;
+import com.example.shop.dto.response.WishlistResponseDTO;
 
 public interface ShopService {
 
     // ======================== 상품 관련 ========================
 
-    List<ProductResponseDto> getProducts(String goodsType, Long requesterId, int page, int size);
+    List<ProductResponseDTO> getProducts();
 
-    ProductResponseDto getProduct(String productId);
+    ProductResponseDTO getProduct(String productId);
 
-    ProductResponseDto createProduct(Long memberId, String role, ProductCreateRequestDto requestDto, MultipartFile imageFile);
+    ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto, MultipartFile imageFile);
 
     void deleteProduct(Long memberId, String productId);
 
     // ======================== 주문 관련 ========================
 
-    OrderResponseDto createOrder(Long memberId, OrderCreateRequestDto requestDto);
+    OrderResponseDTO createOrder(Long memberId, OrderCreateRequestDTO requestDto);
 
-    List<OrderResponseDto> getMyOrders(Long memberId, int page, int size);
+    List<OrderResponseDTO> getMyOrders(Long memberId, int page, int size);
 
-    OrderResponseDto getOrder(Long memberId, String orderId);
+    OrderResponseDTO getOrder(Long memberId, String orderId);
 
-    OrderResponseDto cancelOrder(Long memberId, String orderId);
+    OrderResponseDTO cancelOrder(Long memberId, String orderId);
 
     // ======================== 장바구니 관련 ========================
 
-    CartResponseDto getCart(Long memberId);
+    CartResponseDTO getCart(Long memberId);
 
-    CartResponseDto addToCart(Long memberId, Long productId, int quantity);
+    CartResponseDTO addToCart(Long memberId, Long productId, int quantity);
 
-    CartResponseDto removeFromCart(Long memberId, Long cartItemId);
+    CartResponseDTO removeFromCart(Long memberId, Long cartItemId);
 
     // ======================== 찜목록 관련 ========================
 
-    List<WishlistResponseDto> getWishlist(Long memberId);
+    List<WishlistResponseDTO> getWishlist(Long memberId);
 
-    WishlistResponseDto addToWishlist(Long memberId, Long productId);
+    WishlistResponseDTO addToWishlist(Long memberId, Long productId);
 
     void removeFromWishlist(Long memberId, Long productId);
 }
