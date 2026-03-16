@@ -15,12 +15,12 @@ public class ProductResponseDTO {
     private Long productId;
     private Long sellerId;
     private String sellerType;
-    private String category;    // DB: category (product_category enum)
-    private String title;       // DB: title
+    private String category;
+    private String title;
     private String description;
     private String imageUrl;
-    private BigDecimal price;
-    private String status;
+    private BigDecimal basePrice;   // ✅ price → basePrice (DB: base_price)
+    private Boolean isActive;       // ✅ status(String) → isActive(Boolean) (DB: is_active)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -32,10 +32,9 @@ public class ProductResponseDTO {
                 .category(product.getCategory() != null ? product.getCategory().name() : null)
                 .title(product.getTitle())
                 .description(product.getDescription())
-                // .imageUrl(product.getImageUrl() != null ? "/images/" + product.getImageUrl() : null) //배포시 해당 내용으로 수정
-                .imageUrl(product.getImageUrl() != null ? "" + product.getImageUrl() : null)
-                .price(product.getPrice())
-                .status(product.getStatus())
+                .imageUrl(product.getImageUrl() != null ? product.getImageUrl() : null)
+                .basePrice(product.getBasePrice())      // ✅ getPrice() → getBasePrice()
+                .isActive(product.getIsActive())        // ✅ getStatus() → getIsActive()
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();

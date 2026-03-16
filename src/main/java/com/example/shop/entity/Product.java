@@ -1,18 +1,12 @@
 package com.example.shop.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.entity.enums.SellerType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -26,47 +20,50 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products", schema = "shop") // ✅ schema 추가
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class) // 생성/수정 시간 자동 기록
-public class Product {
+public class Product extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "product_id")
     private Long productId;
 
-    @Column(nullable = false)
+    // 판매자 ID (Member 서비스 참조)
+    @Column(name = "seller_id", nullable = false)
     private Long sellerId;
 
+    // 판매자 유형 (아티스트 / 일반유저)
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "seller_type", nullable = false, length = 20)
     private SellerType sellerType;
 
+    // 상품 분류
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", length = 50)
+    @Column(name = "category", nullable = false, length = 50)
     private ProductCategory category;
 
-    @Column(nullable = false, length = 255)
+    // 상품명
+    @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    // 상품 상세 설명
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    // 대표 이미지 URL
+    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal price;
+    // ✅ base_price 로 컬럼명 변경 (DB 기준)
+    @Column(name = "base_price", nullable = false, precision = 15, scale = 2)
+    private BigDecimal basePrice;
 
-    @Column(nullable = false, length = 20)
-    private String status; // 예: ACTIVE, PENDING, DELETED
-
-    @CreatedDate
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+    // ✅ status(String) → is_active(Boolean) 으로 변경 (DB 기준 Soft Delete)
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
 }

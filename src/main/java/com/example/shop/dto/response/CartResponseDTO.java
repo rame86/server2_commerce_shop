@@ -31,14 +31,16 @@ public class CartResponseDTO {
         private BigDecimal subtotal;
 
         public static CartItemDto fromEntity(CartItem item) {
+            BigDecimal price = item.getProduct().getBasePrice(); // ✅ getPrice() → getBasePrice()
             return CartItemDto.builder()
                     .cartItemId(item.getCartItemId())
                     .productId(item.getProduct().getProductId())
                     .title(item.getProduct().getTitle())
-                    .imageUrl(item.getProduct().getImageUrl() != null ? "/images/" + item.getProduct().getImageUrl() : null)
-                    .unitPrice(item.getProduct().getPrice())
+                    .imageUrl(item.getProduct().getImageUrl() != null
+                            ? "/images/" + item.getProduct().getImageUrl() : null)
+                    .unitPrice(price)
                     .quantity(item.getQuantity())
-                    .subtotal(item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .subtotal(price.multiply(BigDecimal.valueOf(item.getQuantity())))
                     .build();
         }
     }

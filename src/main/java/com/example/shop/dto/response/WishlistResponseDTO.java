@@ -16,7 +16,7 @@ public class WishlistResponseDTO {
     private Long productId;
     private String title;
     private String imageUrl;
-    private BigDecimal price;
+    private BigDecimal basePrice; // ✅ price → basePrice (DB: base_price)
 
     public static WishlistResponseDTO fromEntity(Wishlist wishlist) {
         return WishlistResponseDTO.builder()
@@ -24,9 +24,9 @@ public class WishlistResponseDTO {
                 .memberId(wishlist.getMemberId())
                 .productId(wishlist.getProduct().getProductId())
                 .title(wishlist.getProduct().getTitle())
-                // .imageUrl(wishlist.getProduct().getImageUrl() != null ? "/images/" + wishlist.getProduct().getImageUrl() : null) //배포시 해당 내용으로 변경
-                .imageUrl(wishlist.getProduct().getImageUrl() != null ? "" + wishlist.getProduct().getImageUrl() : null)
-                .price(wishlist.getProduct().getPrice())
+                .imageUrl(wishlist.getProduct().getImageUrl() != null
+                        ? wishlist.getProduct().getImageUrl() : null)
+                .basePrice(wishlist.getProduct().getBasePrice()) // ✅ getPrice() → getBasePrice()
                 .build();
     }
 }

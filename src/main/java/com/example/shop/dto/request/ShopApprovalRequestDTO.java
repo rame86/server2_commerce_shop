@@ -1,5 +1,7 @@
 package com.example.shop.dto.request;
 
+import java.math.BigDecimal;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,8 +18,8 @@ import lombok.ToString;
 @ToString
 public class ShopApprovalRequestDTO {
 
-    @NotNull(message = "굿즈상품 ID는 필수입니다.")
-    private Long goodsId;
+    // 수정 요청 시 기존 상품 ID (신규 등록은 null)
+    private Long productId; // ✅ goodsId → productId (DB: product_id BIGINT, nullable)
 
     @NotNull(message = "신청자 ID는 필수입니다.")
     private Long requesterId;
@@ -35,12 +37,14 @@ public class ShopApprovalRequestDTO {
 
     @NotNull(message = "가격은 필수입니다.")
     @Min(value = 0, message = "가격은 0 이상이어야 합니다.")
-    private Integer price;
+    private BigDecimal price; // ✅ Integer → BigDecimal (DB: NUMERIC(15,2))
 
     @NotNull(message = "재고는 필수입니다.")
     @Min(value = 1, message = "재고는 1 이상이어야 합니다.")
-    private Integer stock;
+    private Integer stockQuantity; // ✅ stock → stockQuantity (DB: stock_quantity)
 
-    // 이미지는 컨트롤러에서 MultipartFile로 따로 받아서 처리할 경우 null일 수 있으므로 검증 생략
-    private String imageUrl; 
+    private String color; // ✅ 신규 (DB: color)
+    private String size;  // ✅ 신규 (DB: size)
+
+    private String imageUrl;
 }

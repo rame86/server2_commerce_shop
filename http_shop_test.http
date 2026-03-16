@@ -1,3 +1,20 @@
-GET http://localhost/msa/shop/shop/
+POST http://localhost:8081/shop/order
+X-User-Id: 16
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzczMzg1NjQ4LCJleHAiOjE3NzMzODkyNDh9.dRgdGpMmSQg9N7I9wJrEVjPkmTHPlZpo9Psbj1tM676XJ1XWCa4fE-S7H6jclUMf
+//Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzczNjIxNjg5LCJleHAiOjE3NzM2MjUyODl9.GkFYccczqD7vTptvlE3VdORWpgbW_dGuOFP6fC7OX680GId7BRKrK8joffLvcGAX
+
+{
+    "shippingAddress": "서울시 강남구 테헤란로 123",
+    "recipientName": "홍길동",
+    "recipientPhone": "010-1234-5678",
+    "items": [
+        {
+            "productId": 8,
+            "quantity": 1
+        },
+        {
+            "productId": 10,
+            "quantity": 2
+        }
+    ]
+}

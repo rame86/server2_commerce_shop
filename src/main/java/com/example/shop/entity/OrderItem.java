@@ -1,7 +1,6 @@
 package com.example.shop.entity;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,25 +26,25 @@ import lombok.NoArgsConstructor;
 public class OrderItem extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "order_item_id", columnDefinition = "uuid")
-    private UUID orderItemId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "order_item_id")
+    private Long orderItemId;
 
     // 소속 주문
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    // 주문한 상품
+    // ✅ product → variant 로 변경 (DB: variant_id UUID FK)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "variant_id", nullable = false)
+    private ProductVariant variant;
 
     // 주문 수량
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    // 주문 당시 단가 (상품 가격 변동에 영향받지 않도록 별도 저장)
+    // ✅ price → unit_price 로 컬럼명 변경 (구매 시점 단가 스냅샷)
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice;
 
