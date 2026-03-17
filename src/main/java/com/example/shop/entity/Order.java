@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -47,7 +50,8 @@ public class Order extends BaseTimeEntity {
 
     // ✅ DB ENUM 기준: PENDING / PAID / SHIPPED / COMPLETED / CANCELLED
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM) // 👈 PostgreSQL의 Custom Enum 타입과 매핑하기 위한 핵심 코드
+    @Column(name = "status", nullable = false, columnDefinition = "order_status") // length 속성 제거
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
 
