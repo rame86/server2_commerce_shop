@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -20,7 +22,7 @@ public class RabbitMQConfig {
     public static final String EXCHANGE_NAME = "msa.direct.exchange";
     public static final String QUEUE_NAME = "shop.request.queue";
     public static final String ROUTING_KEY = "shop.request";
-    
+
     public static final String REPLY_ROUTING_KEY = "reply.shop.request";
     public static final String REPLY_QUEUE_NAME = "reply.shop.request.queue";
 
@@ -46,6 +48,7 @@ public class RabbitMQConfig {
      */
     @Bean
     public Binding requestBinding(@Qualifier("requestQueue") Queue queue, DirectExchange exchange) {
+        log.info("Binding Queue: {} to Exchange: {} with Routing Key: {}", QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
     }
 
@@ -54,17 +57,24 @@ public class RabbitMQConfig {
      */
     @Bean
     public Binding replyBinding(@Qualifier("replyQueue") Queue queue, DirectExchange exchange) {
+        log.info("Binding Reply Queue: {} to Exchange: {} with Routing Key: {}", REPLY_QUEUE_NAME, EXCHANGE_NAME,
+                REPLY_ROUTING_KEY);
         return BindingBuilder.bind(queue).to(exchange).with(REPLY_ROUTING_KEY);
     }
 
     @Bean
     public Jackson2JsonMessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+        ObjectMapper objectMapper = new ObjectMapper();
+        // LocalDateTime 같은 Java 8 날짜 타입을 인식할 수 있게 해줌
+        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 
     // RabbitTemplate에 변환기 설정 주입
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        log.info("Configuring RabbitTemplate with ConnectionFactory and MessageConverter");
         // 클래스명(ConnectionFactory)이 아닌 주입받은 변수명(connectionFactory)을 사용
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(messageConverter());

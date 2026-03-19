@@ -27,14 +27,23 @@ public class ShopApprovalListener {
                 .requesterId(message.requesterId())
                 .requesterName(message.requesterName())
                 .goodsName(message.goodsName())
-                .goodsType(ProductCategory.valueOf(message.goodsType())) // String → enum 변환
+                .goodsType(ProductCategory.valueOf(message.goodsType()))
                 .description(message.description())
-                .price(message.price())
-                .stockQuantity(message.stock())  // stock → stockQuantity
+                .price(message.price())             // ✅ BigDecimal 유지
+                .color(message.color())             // ✅ 신규 (DB: color)
+                .size(message.size())               // ✅ 신규 (DB: size)
+                .stockQuantity(message.stockQuantity()) // ✅ stock → stockQuantity
                 .imageUrl(message.imageUrl())
                 .build();
 
         shopApprovalRepository.save(approval);
         log.info("승인 요청 DB 저장 완료! approvalId: {}", approval.getApprovalId());
+    }
+
+    // ✅ ShopEventListener 통합 — 응답 메시지 수신 (REPLY_QUEUE_NAME 전용)
+    @RabbitListener(queues = RabbitMQConfig.REPLY_QUEUE_NAME)
+    public void replyReceiveMessage(Object message) {
+        // TODO: 결제 결과, 외부 서비스 콜백 등 응답 처리 로직 구현
+        log.info("응답 메시지 수신: {}", message);
     }
 }

@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.example.shop.entity.Order;
 import com.example.shop.entity.OrderItem;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -18,12 +19,9 @@ public class OrderResponseDTO {
     private String orderId;
     private Long memberId;
     private String shippingAddress;
-    private String recipientName;
-    private String recipientPhone;
-    private BigDecimal totalPrice;
+    @JsonProperty("totalAmount")
+    private BigDecimal totalAmount;
     private String status;
-    private String trackingNumber;
-    private String cancelReason;
     private List<OrderItemDto> orderItems;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -32,22 +30,27 @@ public class OrderResponseDTO {
     @Builder
     public static class OrderItemDto {
         private String orderItemId;
-        private Long productId;
-        private String title;
+        private String variantId;       // ✅ productId → variantId (DB: variant_id UUID)
+        private String color;           // ✅ variant 정보 추가
+        private String size;            // ✅ variant 정보 추가
+        private String title;           // variant → product.title 조인
         private String imageUrl;
         private Integer quantity;
         private BigDecimal unitPrice;
         private BigDecimal subtotal;
 
         public static OrderItemDto fromEntity(OrderItem item) {
+            BigDecimal unitPrice = item.getUnitPrice(); // ✅ getPrice() → getUnitPrice()
             return OrderItemDto.builder()
                     .orderItemId(item.getOrderItemId().toString())
-                    .productId(item.getProduct().getProductId())
-                    .title(item.getProduct().getTitle())
-                    .imageUrl(item.getProduct().getImageUrl() != null ? "/images/" + item.getProduct().getImageUrl() : null)
+                    .variantId(item.getVariant().getVariantId().toString()) // ✅ variant FK 기준
+                    .color(item.getVariant().getColor())
+                    .size(item.getVariant().getSize())
+                    .title(item.getVariant().getProduct().getTitle()) // ✅ variant→product 조인
+                    .imageUrl(item.getVariant().getProduct().getImageUrl())
                     .quantity(item.getQuantity())
-                    .unitPrice(item.getUnitPrice())
-                    .subtotal(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .unitPrice(unitPrice)
+                    .subtotal(unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())))
                     .build();
         }
     }
@@ -57,12 +60,8 @@ public class OrderResponseDTO {
                 .orderId(order.getOrderId().toString())
                 .memberId(order.getMemberId())
                 .shippingAddress(order.getShippingAddress())
-                .recipientName(order.getRecipientName())
-                .recipientPhone(order.getRecipientPhone())
-                .totalPrice(order.getTotalPrice())
+                .totalAmount(order.getTotalAmount())
                 .status(order.getStatus().name())
-                .trackingNumber(order.getTrackingNumber())
-                .cancelReason(order.getCancelReason())
                 .orderItems(order.getOrderItems().stream()
                         .map(OrderItemDto::fromEntity)
                         .collect(Collectors.toList()))
