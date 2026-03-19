@@ -1,5 +1,8 @@
 package com.example.shop.entity;
 
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+
 import com.example.shop.entity.enums.ProductCategory;
 
 import jakarta.persistence.Column;
@@ -40,6 +43,7 @@ public class Approval extends BaseTimeEntity {
     private String goodsName;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "goods_type", nullable = false, length = 50)
     private ProductCategory goodsType;
 
@@ -66,6 +70,7 @@ public class Approval extends BaseTimeEntity {
 
     // ✅ ApprovalStatus enum 사용 (DB: shop.approval_status)
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "status", nullable = false, length = 20)
     private ApprovalStatus status;
 

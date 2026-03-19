@@ -2,15 +2,13 @@ package com.example.shop.controller;
 
 import java.util.List;
 
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.dto.request.ProductCreateRequestDTO;
 import com.example.shop.dto.response.ProductResponseDTO;
@@ -57,42 +55,36 @@ public class ProductController {
     /**
      * [공식 굿즈 등록 - 관리자 전용]
      * POST /product/official
-     * consumes = MediaType.MULTIPART_FORM_DATA_VALUE: JSON 데이터와 파일을 동시에 받기 위한 설정
      */
-    @PostMapping(value = "/official", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ProductResponseDTO createOfficial(
-            @RequestPart("data") ProductCreateRequestDTO requestDto, // 텍스트/JSON 데이터 부분
-            @RequestPart(value = "image", required = false) MultipartFile image) { // 업로드된 이미지 파일 부분
+    @PostMapping("/official")
+    public ProductResponseDTO createOfficial(@RequestBody ProductCreateRequestDTO requestDto) {
+        log.info(">>>> [Controller] 공식 상품 등록 요청 시작: {}", requestDto.getGoodsName());
 
-        // 실제 운영 환경에서는 로그인 정보(SecurityContext)에서 memberId를 뽑아야 하지만, 현재는 테스트용으로 1L(관리자)
-        // 전달
-        return shopService.createProduct(1L, "ADMIN", requestDto, image);
+        // 1. 서비스 호출 (한 번만 호출하고 결과를 변수에 담음)
+        // 현재 로그인 정보를 가져올 수 없는 상황이라면 임시로 1L, "ADMIN"을 직접 넘깁니다.
+        ProductResponseDTO response = shopService.createProduct(1L, "ADMIN", requestDto, null);
+
+        log.info(">>>> [Controller] 서비스 호출 완료, 반환 데이터 title: {}", response.getTitle());
+
+        // 2. 결과 반환
+        return response;
     }
 
-    /**
-     * [공식 굿즈 삭제]
-     * DELETE /product/official/{productId}
-     */
+    /** [공식 굿즈 삭제] */
     @DeleteMapping("/official/{productId}")
     public void deleteOfficial(@PathVariable String productId) {
-        // 경로에 들어온 {productId}를 읽어서 해당 상품을 삭제 처리함
         shopService.deleteProduct(1L, productId);
     }
 
     /*************************************************************/
     // 유저
     /*************************************************************/
-    /**
-     * [중고 굿즈 등록 - 일반 유저]
-     * POST /product/secondhand
-     */
-    @PostMapping(value = "/secondhand", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ProductResponseDTO createSecondhand(
-            @RequestPart("data") ProductCreateRequestDTO requestDto,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
 
-        // 테스트용으로 일반 사용자(2L, USER) 권한으로 상품을 등록함
-        return shopService.createProduct(2L, "USER", requestDto, image);
+    /** [중고 굿즈 등록] */
+    @PostMapping("/secondhand")
+    public ProductResponseDTO createSecondhand(@RequestBody ProductCreateRequestDTO requestDto) {
+        log.info("중고 상품 등록 요청: {}", requestDto.getGoodsName());
+        return shopService.createProduct(2L, "USER", requestDto, null);
     }
 
     @PostMapping("/unofficial")

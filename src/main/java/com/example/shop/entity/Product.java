@@ -2,6 +2,9 @@ package com.example.shop.entity;
 
 import java.math.BigDecimal;
 
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+
 import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.entity.enums.SellerType;
 
@@ -20,7 +23,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "products", schema = "shop") // ✅ schema 추가
+@Table(name = "products", schema = "shop")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -38,12 +41,14 @@ public class Product extends BaseTimeEntity {
 
     // 판매자 유형 (아티스트 / 일반유저)
     @Enumerated(EnumType.STRING)
-    @Column(name = "seller_type", nullable = false, length = 20)
+    @JdbcType(PostgreSQLEnumJdbcType.class) 
+    @Column(name = "seller_type", nullable = false)
     private SellerType sellerType;
 
     // 상품 분류
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false, length = 50)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "category", nullable = false)
     private ProductCategory category;
 
     // 상품명

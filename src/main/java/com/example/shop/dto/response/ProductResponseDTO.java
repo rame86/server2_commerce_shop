@@ -3,6 +3,7 @@ package com.example.shop.dto.response;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.example.shop.entity.Approval;
 import com.example.shop.entity.Product;
 
 import lombok.Builder;
@@ -19,11 +20,12 @@ public class ProductResponseDTO {
     private String title;
     private String description;
     private String imageUrl;
-    private BigDecimal basePrice;   // ✅ price → basePrice (DB: base_price)
-    private Boolean isActive;       // ✅ status(String) → isActive(Boolean) (DB: is_active)
+    private BigDecimal basePrice;
+    private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // ✅ 기존 상품 엔티티 변환
     public static ProductResponseDTO fromEntity(Product product) {
         return ProductResponseDTO.builder()
                 .productId(product.getProductId())
@@ -32,11 +34,29 @@ public class ProductResponseDTO {
                 .category(product.getCategory() != null ? product.getCategory().name() : null)
                 .title(product.getTitle())
                 .description(product.getDescription())
-                .imageUrl(product.getImageUrl() != null ? product.getImageUrl() : null)
-                .basePrice(product.getBasePrice())      // ✅ getPrice() → getBasePrice()
-                .isActive(product.getIsActive())        // ✅ getStatus() → getIsActive()
+                .imageUrl(product.getImageUrl())
+                .basePrice(product.getBasePrice())
+                .isActive(product.getIsActive())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
+                .build();
+    }
+
+    // ✅ 승인 요청 엔티티 변환 (Enum 타입을 String으로 변환 로직 추가)
+    public static ProductResponseDTO fromApproval(Approval approval) {
+        return ProductResponseDTO.builder()
+                .productId(null)
+                .sellerId(approval.getRequesterId())
+                // .name()을 사용하여 Enum -> String 변환 오류 해결
+                .sellerType(approval.getGoodsType() != null ? approval.getGoodsType().name() : null)
+                .category(approval.getGoodsType() != null ? approval.getGoodsType().name() : null)
+                .title(approval.getGoodsName())
+                .description(approval.getDescription())
+                .imageUrl(approval.getImageUrl())
+                .basePrice(approval.getPrice())
+                .isActive(false)
+                .createdAt(approval.getCreatedAt())
+                .updatedAt(approval.getUpdatedAt())
                 .build();
     }
 }

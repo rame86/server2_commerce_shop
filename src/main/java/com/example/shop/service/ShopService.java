@@ -10,6 +10,7 @@ import com.example.shop.dto.response.CartResponseDTO;
 import com.example.shop.dto.response.OrderResponseDTO;
 import com.example.shop.dto.response.ProductResponseDTO;
 import com.example.shop.dto.response.WishlistResponseDTO;
+import com.example.shop.entity.Approval;
 
 public interface ShopService {
 
@@ -21,6 +22,8 @@ public interface ShopService {
     ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto, MultipartFile imageFile);
 
     void deleteProduct(Long memberId, String productId);
+    
+    List<Approval> getPendingApprovals();
 
     // ======================== 주문 관련 ========================
     // 주문 생성

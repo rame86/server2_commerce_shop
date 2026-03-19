@@ -46,6 +46,7 @@ public class RabbitMQConfig {
      */
     @Bean
     public Binding requestBinding(@Qualifier("requestQueue") Queue queue, DirectExchange exchange) {
+        log.info("Binding Queue: {} to Exchange: {} with Routing Key: {}", QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
     }
 
@@ -54,6 +55,7 @@ public class RabbitMQConfig {
      */
     @Bean
     public Binding replyBinding(@Qualifier("replyQueue") Queue queue, DirectExchange exchange) {
+        log.info("Binding Reply Queue: {} to Exchange: {} with Routing Key: {}", REPLY_QUEUE_NAME, EXCHANGE_NAME, REPLY_ROUTING_KEY);
         return BindingBuilder.bind(queue).to(exchange).with(REPLY_ROUTING_KEY);
     }
 
@@ -65,6 +67,7 @@ public class RabbitMQConfig {
     // RabbitTemplate에 변환기 설정 주입
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        log.info("Configuring RabbitTemplate with ConnectionFactory and MessageConverter");
         // 클래스명(ConnectionFactory)이 아닌 주입받은 변수명(connectionFactory)을 사용
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(messageConverter());

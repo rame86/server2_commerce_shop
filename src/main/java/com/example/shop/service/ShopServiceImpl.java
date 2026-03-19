@@ -1,18 +1,18 @@
 package com.example.shop.service;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
+import com.example.shop.config.RabbitMQConfig;
 import com.example.shop.dto.request.OrderCreateRequestDTO;
 import com.example.shop.dto.request.OrderItemDTO;
 import com.example.shop.dto.request.ProductCreateRequestDTO;
@@ -20,6 +20,8 @@ import com.example.shop.dto.response.CartResponseDTO;
 import com.example.shop.dto.response.OrderResponseDTO;
 import com.example.shop.dto.response.ProductResponseDTO;
 import com.example.shop.dto.response.WishlistResponseDTO;
+import com.example.shop.entity.Approval;
+import com.example.shop.entity.ApprovalStatus;
 import com.example.shop.entity.Cart;
 import com.example.shop.entity.CartItem;
 import com.example.shop.entity.Order;
@@ -28,6 +30,8 @@ import com.example.shop.entity.OrderStatus;
 import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductVariant;
 import com.example.shop.entity.Wishlist;
+import com.example.shop.entity.enums.ProductCategory;
+import com.example.shop.repository.ApprovalRepository;
 import com.example.shop.repository.CartRepository;
 import com.example.shop.repository.CartitemRepository;
 import com.example.shop.repository.OrderRepository;
@@ -49,6 +53,8 @@ public class ShopServiceImpl implements ShopService {
     private final CartitemRepository cartitemRepository;
     private final OrderRepository orderRepository;
     private final WishlistRepository wishlistRepository;
+    private final ApprovalRepository approvalRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     // @Value("${file.upload-dir}")
     private String uploadDir;
@@ -73,28 +79,51 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional
-    public ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto, MultipartFile imageFile) {
-        String imagePath = null;
-        if (imageFile != null && !imageFile.isEmpty()) {
-            try {
-                String fileName = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
-                File dest = new File(uploadDir, fileName);
-                imageFile.transferTo(dest);
-                imagePath = fileName;
-            } catch (IOException e) {
-                throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
-            }
-        }
+    public ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto,
+            MultipartFile imageFile) {
+                log.info("======= 서비스 로직 진입 완료 =======");
 
-        Product product = Product.builder()
-                .title(requestDto.getGoodsName())
+        // 1. 이미지 처리 (생략)
+        String imageUrl = null;
+
+        // 2. 만약 "승인 대기(Approval)" 테이블에 저장하는 것이 목적이라면:
+        // 로그 상으로는 productRepository.save()를 호출하고 있는데,
+        // 요구사항대로라면 아래와 같이 approvalRepository를 사용해야 합니다.
+
+        // ✅ 엔티티 빌더 부분 수정
+        Approval approvalRequest = Approval.builder()
+                .requesterId(memberId)
+                .requesterName(requestDto.getRequesterName())
+                .goodsName(requestDto.getGoodsName())
+                // requestDto.getGoodsType()이 String이라면 아래와 같이 변환 필요
+                .goodsType(ProductCategory.valueOf(requestDto.getGoodsType()))
                 .description(requestDto.getDescription())
-                .basePrice(requestDto.getPrice()) // ✅ price → basePrice
-                .imageUrl(imagePath)
-                .isActive(true)                   // ✅ status 제거 → isActive 기본값 true
+                .price(requestDto.getPrice())
+                .imageUrl(imageUrl)
+                // .status(ApprovalStatus)
                 .build();
 
-        return ProductResponseDTO.fromEntity(productRepository.save(product));
+        // [중요] 만약 현재 코드에서 productRepository.save()를 호출 중이라면
+        // 이 부분을 approvalRepository.save()로 변경하거나,
+        // Product 엔티티를 쓸 거라면 아래 3번처럼 모든 필드를 채워야 합니다.
+        Approval saved = approvalRepository.save(approvalRequest);
+        
+        log.info(">>>> [RabbitMQ 전송 시도] RoutingKey: {}, Data: {}", 
+             RabbitMQConfig.ROUTING_KEY, saved.getGoodsName());
+
+    try {
+        log.info(">>>> RabbitMQ로 던지기 직전!");
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY,
+                saved // 혹은 전달하고자 하는 DTO
+        );
+        log.info(">>>> [RabbitMQ 전송 완료] 상품명: {}", saved.getGoodsName());
+    } catch (Exception e) {
+        log.error(">>>> [RabbitMQ 전송 실패] 에러: {}", e.getMessage());
+    }
+
+        return ProductResponseDTO.fromApproval(saved);
     }
 
     @Override
@@ -105,6 +134,12 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         // product.deactivate(); // Product에 deactivate() 메서드 추가 권장
         productRepository.deleteById(Long.parseLong(productId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Approval> getPendingApprovals() {
+        // PENDING 상태인 데이터만 최신순으로 가져옴
+        return approvalRepository.findByStatusOrderByCreatedAtDesc(ApprovalStatus.PENDING);
     }
 
     // ======================== 주문 관련 ========================
@@ -141,9 +176,9 @@ public class ShopServiceImpl implements ShopService {
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .variant(variant)           // ✅ product → variant
+                    .variant(variant) // ✅ product → variant
                     .quantity(itemDto.getQuantity())
-                    .unitPrice(unitPrice)       // ✅ Price → unitPrice (필드명 수정)
+                    .unitPrice(unitPrice) // ✅ Price → unitPrice (필드명 수정)
                     .build();
             order.addOrderItem(orderItem);
         }
