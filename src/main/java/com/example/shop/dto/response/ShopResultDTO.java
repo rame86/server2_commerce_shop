@@ -1,8 +1,10 @@
 package com.example.shop.dto.response;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.example.shop.entity.Approval;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,7 +35,9 @@ public class ShopResultDTO {
 
     private String status;          // PENDING / CONFIRMED / FAILED
     private String rejectionReason; // 반려 사유
-    private String createdAt;       // 신청 일자
+
+    @JsonFormat(shape = JsonFormat.Shape.ANY, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;       // 신청 일자
 
     public static ShopResultDTO fromEntity(Approval approval) {
         return ShopResultDTO.builder()
@@ -51,7 +55,7 @@ public class ShopResultDTO {
                 .imageUrl(approval.getImageUrl())
                 .status(approval.getStatus() != null ? approval.getStatus().name() : null)
                 .rejectionReason(approval.getRejectionReason())
-                .createdAt(approval.getCreatedAt() != null ? approval.getCreatedAt().toString() : null)
+                .createdAt(approval.getCreatedAt())
                 .build();
     }
 }
