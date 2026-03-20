@@ -1,0 +1,15 @@
+POST http://localhost:8081/shop/order
+X-User-Id: 13
+Content-Type: application/json
+//Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMyIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzczNzI2NjA5LCJleHAiOjE3NzM3MzAyMDl9.OiFMQTY5SdcAduUo3io7PxNUp1q3PcCHel1K-OmdFyzvdtSHyeFnbLTMMtmxcvA2
+
+{
+  "items": [
+    {
+      "variantId": "7c7ea25b-04b3-4630-b727-901d24e5ee2f", 
+      "quantity": 2
+    }
+  ],
+  "shippingAddress": "서울시 수영구",
+  "totalAmount": 118000
+}

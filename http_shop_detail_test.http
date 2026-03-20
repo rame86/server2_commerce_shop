@@ -1,0 +1,27 @@
+POST http://localhost:8081/product/official
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMyIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzczODg5MjExLCJleHAiOjE3NzM4OTI4MTF9.a7U8wXSIUv123hPhIse-0DqiI-pGU6HCBeTAn5enxIxJraC_1omhpBEahwnluUYg
+
+{
+  "goodsName": "한정판 아티스트 무드등",
+  "description": "아티스트의 친필 사인이 각인된 은은한 조명의 무드등입니다.",
+  "price": 45000.00,
+  "goodsType": "OFFICIAL",
+  "requesterName": "장수영",
+  "variants": [
+    {
+      "color": "Warm White",
+      "size": "Standard",
+      "additionalPrice": 0,
+      "stockQuantity": 100,
+      "skuCode": "MOOD-LIGHT-01"
+    },
+    {
+      "color": "Cool Blue",
+      "size": "Standard",
+      "additionalPrice": 5000.00,
+      "stockQuantity": 50,
+      "skuCode": "MOOD-LIGHT-02"
+    }
+  ]
+}

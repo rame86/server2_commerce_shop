@@ -1,0 +1,7 @@
+POST http://localhost/msa/core/member/login
+Content-Type: application/json
+
+{
+    "email":"suyeong1526@daum.net",
+    "password":"tndud"
+}
