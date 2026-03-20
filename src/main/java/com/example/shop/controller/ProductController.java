@@ -88,18 +88,21 @@ public class ProductController {
     }
 
     @PostMapping("/unofficial")
-    public String updateFanmade() {
-        return "팬메이드굿즈 등록";
+    public ProductResponseDTO createFanmade(@RequestBody ProductCreateRequestDTO requestDto) { // 타입을 DTO로 일치시킴
+        log.info("팬메이드 상품 등록 요청: {}", requestDto.getGoodsName());
+
+
+        return shopService.createProduct(2L, "USER", requestDto, null);
     }
 
-    @DeleteMapping("/secondhand")
-    public String deleteSecondhand() {
-        return "중고굿즈 삭제";
+    @DeleteMapping("/secondhand/{productId}")
+    public void deleteSecondhand(@PathVariable String productId) {
+        shopService.deleteProduct(1L, productId);
     }
 
-    @DeleteMapping("/unofficial")
-    public String deleteFanmade() {
-        return "팬메이드굿즈 삭제";
+    @DeleteMapping("/unofficial/{productId}")
+    public void deleteFanmade(@PathVariable String productId) {
+        shopService.deleteProduct(1L, productId);
     }
 
 }
