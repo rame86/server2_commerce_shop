@@ -94,26 +94,34 @@ public class ShopServiceImpl implements ShopService {
             MultipartFile imageFile) {
         log.info("======= 서비스 로직 진입 완료 =======");
 
-          // 이미지 저장 처리
-    String imageUrl = null;
-    if (imageFile != null && !imageFile.isEmpty()) {
-        try {
-            String fileName = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
-            Path uploadPath = Paths.get(uploadDir);
-            
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);  // 디렉토리 자동 생성
+        // 이미지 저장 처리
+        String imageUrl = null;
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                // 1. 파일명 중복 방지를 위한 UUID 적용
+                String fileName = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
+                Path uploadPath = Paths.get(uploadDir); // application.properties의 shop.image.upload-path 값
+
+                // 2. 디렉토리 존재 여부 확인 및 생성
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                // 3. 파일 저장
+                Files.copy(imageFile.getInputStream(),
+                        uploadPath.resolve(fileName),
+                        StandardCopyOption.REPLACE_EXISTING);
+
+                // 4. URL 생성 (중요!)
+                // 설정하신 spring.mvc.static-path-pattern 이 /images/** 이므로
+                // 호출 경로는 /images/파일명 형태가 되어야 합니다.
+                imageUrl = "/images/" + fileName;
+
+            } catch (IOException e) {
+                // 예외 처리 (기존 BusinessException 활용)
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
             }
-            
-            Files.copy(imageFile.getInputStream(), 
-                       uploadPath.resolve(fileName), 
-                       StandardCopyOption.REPLACE_EXISTING);
-            
-            imageUrl = "/msa/shop/images/" + fileName;
-        } catch (IOException e) {
-            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
         }
-    }
         // ✅ 엔티티 빌더 부분 수정
         String color = null;
         String size = null;
@@ -153,8 +161,7 @@ public class ShopServiceImpl implements ShopService {
                 approvalRequest.getColor(),
                 approvalRequest.getSize(),
                 approvalRequest.getStockQuantity(),
-                approvalRequest.getImageUrl()
-        );
+                approvalRequest.getImageUrl());
 
         productMessageProducer.sendProductCreatedEvent(message);
 
