@@ -107,12 +107,12 @@ public class ShopController {
             @RequestHeader("X-User-Id") Long memberId,
             @RequestBody OrderCreateRequestDTO requestDto) {
 
-        // 1. 필수 값 검증 (Self-Review: 예외 처리)
+        // 1. 필수 값 검증
         if (requestDto.getItems() == null || requestDto.getItems().isEmpty()) {
             throw new IllegalArgumentException("주문 항목이 비어 있습니다.");
         }
 
-        // 2. 서비스 호출 (이 부분이 실행되어야 DB에 저장됨)
+        // 2. 서비스 호출 및 DB 저장
         OrderResponseDTO response = shopService.createOrder(memberId, requestDto);
 
         return ResponseEntity.ok(response);
