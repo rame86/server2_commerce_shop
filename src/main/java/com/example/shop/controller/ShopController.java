@@ -26,13 +26,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/shop")
 @Slf4j
 @RequiredArgsConstructor
 public class ShopController {
 
     private final ShopService shopService; // Repository 대신 Service 주입
 
+    
     @GetMapping("/")
     public List<ProductResponseDTO> list() {
         log.info("----------> /shop/list 요청 받음");

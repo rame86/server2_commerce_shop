@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/")
+@RequestMapping("/product")
 @RequiredArgsConstructor
 public class ProductController {
 
