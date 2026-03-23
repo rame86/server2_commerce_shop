@@ -161,7 +161,7 @@ public class ShopServiceImpl implements ShopService {
                 approvalRequest.getColor(),
                 approvalRequest.getSize(),
                 approvalRequest.getStockQuantity(),
-                "/msa/shop" + approvalRequest.getImageUrl());
+                approvalRequest.getImageUrl());
 
         productMessageProducer.sendProductCreatedEvent(message);
 

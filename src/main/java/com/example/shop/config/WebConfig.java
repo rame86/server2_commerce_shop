@@ -13,9 +13,12 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // application.properties의 경로를 기반으로 리소스 핸들러 설정
-        // 예: ./uploads/images -> file:./uploads/images/
-        String location = "file:" + (uploadPath.endsWith("/") ? uploadPath : uploadPath + "/");
+        // 상대 경로(./uploads/images)를 절대 경로로 변환하여 윈도우 환경에서 안정적인 파일 서빙 지원
+        String absolutePath = new java.io.File(uploadPath).getAbsolutePath().replace("\\", "/");
+        if (!absolutePath.endsWith("/")) {
+            absolutePath += "/";
+        }
+        String location = "file:///" + absolutePath;
         
         registry.addResourceHandler("/images/**")
                 .addResourceLocations(location);
