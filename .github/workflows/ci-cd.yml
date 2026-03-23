@@ -1,10 +1,9 @@
 #shop-service/ ci-cd.yml
-
 name: Shop Service CI/CD
 
 on:
   push:
-    branches: [ master ] # 1. 트리거 브랜치를 master로 변경
+    branches: [ master ]
 
 jobs:
   build-and-deploy:
@@ -19,27 +18,53 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 1. Shop 서비스 빌드 (Gradle)
-      - name: Build Shop Service
+      # 1. JAR 파일 빌드 (테스트 생략으로 속도 최적화)
+      - name: Build with Gradle
         run: |
-          chmod +x gradlew
-          ./gradlew build -x test
+          chmod +x ./gradlew
+          ./gradlew clean bootJar -x test
 
-      # 2. DockerHub 로그인
-      - name: Login to DockerHub
+      # 2. Docker Hub 로그인
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 3. 이미지 빌드 및 푸시
+      # 3. Docker 이미지 빌드 및 푸시
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/msa-shop:latest .
-          docker push ${{ secrets.DOCKER_USERNAME }}/msa-shop:latest
+          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/msa-shop
+          docker build -t $IMAGE_NAME:latest .
+          docker push $IMAGE_NAME:latest
 
-      # 4. GCP Server 2 배포
+      # 4. GitHub Actions 러너의 공용 IP 가져오기
+      - name: Get Runner IP
+        id: ip
+        run: echo "ipv4=$(curl -s https://api.ipify.org)" >> $GITHUB_OUTPUT
 
+      # 5. GCP 인증
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 6. gcloud SDK 설정
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 7. SSH 포트 일시 허용 (방화벽 규칙 이름 충돌 방지를 위해 shop 명시)
+      - name: Open Firewall for Deployment
+        run: |
+          gcloud compute firewall-rules create allow-ssh-shop-${{ github.run_id }} \
+            --direction=INGRESS \
+            --priority=100 \
+            --action=ALLOW \
+            --rules=tcp:22 \
+            --source-ranges=${{ steps.ip.outputs.ipv4 }}/32 \
+            --description="Temporary SSH access for Shop CI/CD"
+
+      # 8. GCP Server 2 배포
       - name: Deploy to GCP Server 2
         uses: appleboy/ssh-action@master
         with:
@@ -47,23 +72,40 @@ jobs:
           username: oksm1003
           key: ${{ secrets.GCP_KEY }}
           script: |
-            cd /home/oksm1003/shop 
+            WORK_DIR="/home/oksm1003/shop"
+            mkdir -p $WORK_DIR
             
-            git remote set-url origin https://github.com/rame86/server2_commerce_shop.git
+            # 볼륨 마운트용 호스트 디렉토리 사전 생성 (권한 이슈 방지)
+            mkdir -p /home/oksm1003/images/shop
             
-            # 2. 서버에서 가져올 브랜치도 master로 변경 (중요!)
-            git fetch origin master
-            git checkout master || git checkout -b master
-            git reset --hard origin/master 
+            cd $WORK_DIR
             
-            # .env 설정 및 실행
-            echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
+            # Git 동기화
+            git remote set-url origin https://github.com/rame86/server2_commerce_shop.git || true
+            git fetch origin
+            git reset --hard origin/master
+            git clean -fd
+            git pull origin master
+
+            # 네트워크 확인 및 생성
+            docker network inspect msa-network >/dev/null 2>&1 || docker network create msa-network
+
+            # .env 파일 동적 생성
+            echo "SPRING_PROFILES_ACTIVE=prod" > .env
+            echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
             echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
             echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
             echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
             echo "TZ=Asia/Seoul" >> .env
             
+            # 컨테이너 실행 및 정리
             docker compose pull
-            docker compose up -d
+            docker compose up -d --force-recreate
             docker image prune -f
+
+      # 9. 방화벽 규칙 삭제
+      - name: Close Firewall
+        if: always()
+        run: |
+          gcloud compute firewall-rules delete allow-ssh-shop-${{ github.run_id }} --quiet
