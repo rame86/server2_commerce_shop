@@ -1,12 +1,18 @@
 package com.example.shop.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -61,7 +67,7 @@ public class ShopServiceImpl implements ShopService {
     private final RabbitTemplate rabbitTemplate;
     private final ProductMessageProducer productMessageProducer;
 
-    // @Value("${file.upload-dir}")
+    @Value("${shop.image.upload-path}")
     private String uploadDir;
 
     // ======================== 상품 관련 ========================
@@ -88,13 +94,26 @@ public class ShopServiceImpl implements ShopService {
             MultipartFile imageFile) {
         log.info("======= 서비스 로직 진입 완료 =======");
 
-        // 1. 이미지 처리 (생략)
-        String imageUrl = null;
-
-        // 2. 만약 "승인 대기(Approval)" 테이블에 저장하는 것이 목적이라면:
-        // 로그 상으로는 productRepository.save()를 호출하고 있는데,
-        // 요구사항대로라면 아래와 같이 approvalRepository를 사용해야 합니다.
-
+          // 이미지 저장 처리
+    String imageUrl = null;
+    if (imageFile != null && !imageFile.isEmpty()) {
+        try {
+            String fileName = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
+            Path uploadPath = Paths.get(uploadDir);
+            
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);  // 디렉토리 자동 생성
+            }
+            
+            Files.copy(imageFile.getInputStream(), 
+                       uploadPath.resolve(fileName), 
+                       StandardCopyOption.REPLACE_EXISTING);
+            
+            imageUrl = "/msa/shop/images/" + fileName;
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
+        }
+    }
         // ✅ 엔티티 빌더 부분 수정
         String color = null;
         String size = null;
