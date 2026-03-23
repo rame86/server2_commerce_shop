@@ -75,6 +75,14 @@ public class ShopController {
         return shopService.getWishlist(memberId);
     }
 
+    @DeleteMapping("/wishlist/{productId}")
+    public void removeFromWishlist(
+            @RequestHeader("X-User-Id") Long memberId,
+            @PathVariable(name = "productId") Long productId) {
+        log.info("삭제 요청 - 회원: {}, 상품: {}", memberId, productId);
+        shopService.removeFromWishlist(memberId, productId);
+    }
+
     // 장바구니 상품 추가
     @PostMapping("/cart")
     public CartResponseDTO addToCart(
@@ -107,12 +115,12 @@ public class ShopController {
             @RequestHeader("X-User-Id") Long memberId,
             @RequestBody OrderCreateRequestDTO requestDto) {
 
-        // 1. 필수 값 검증 (Self-Review: 예외 처리)
+        // 1. 필수 값 검증
         if (requestDto.getItems() == null || requestDto.getItems().isEmpty()) {
             throw new IllegalArgumentException("주문 항목이 비어 있습니다.");
         }
 
-        // 2. 서비스 호출 (이 부분이 실행되어야 DB에 저장됨)
+        // 2. 서비스 호출 및 DB 저장
         OrderResponseDTO response = shopService.createOrder(memberId, requestDto);
 
         return ResponseEntity.ok(response);

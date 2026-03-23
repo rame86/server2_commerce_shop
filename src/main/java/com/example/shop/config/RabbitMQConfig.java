@@ -28,6 +28,10 @@ public class RabbitMQConfig {
 
     public static final String SHOP_REQ_ROUTING_KEY = "shop.request";
 
+    // 결제관련
+    public static final String SHOP_PAY_REPLY_QUEUE = "shop.pay.reply.queue";
+    public static final String SHOP_PAY_REPLY_ROUTING_KEY = "shop.pay.reply";
+
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(EXCHANGE_NAME);
@@ -41,6 +45,16 @@ public class RabbitMQConfig {
     @Bean
     public Queue replyQueue() {
         return new Queue(REPLY_QUEUE_NAME, true);
+    }
+
+    @Bean
+    public Queue shopPayReplyQueue() {
+        return new Queue(SHOP_PAY_REPLY_QUEUE, true);
+    }
+
+    @Bean
+    public Binding shopPayReplyBinding(@Qualifier("shopPayReplyQueue") Queue queue, DirectExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(SHOP_PAY_REPLY_ROUTING_KEY);
     }
 
     /**

@@ -25,6 +25,7 @@ public enum ErrorCode {
     
     // 기타
     FILE_UPLOAD_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다.");
+   
 
     private final HttpStatus status;
     private final String message;

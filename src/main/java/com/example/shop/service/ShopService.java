@@ -26,18 +26,12 @@ public interface ShopService {
     List<Approval> getPendingApprovals();
 
     // ======================== 주문 관련 ========================
-    // 주문 생성
+    // 주문 생성 및 결제 큐 전송
     OrderResponseDTO createOrder(Long memberId, OrderCreateRequestDTO requestDto);
-
-    // 내 주문 목록 조회 (페이징 반영)
+    // 내 주문 목록 조회 (페이징)
     List<OrderResponseDTO> getMyOrders(Long memberId, int page, int size);
-
     // 주문 상세 조회
     OrderResponseDTO getOrder(Long memberId, String orderId);
-
-    // // 주문 취소
-    // OrderResponseDTO cancelOrder(Long memberId, String orderId);
-
     // 결제 처리 (체크아웃)
     String checkout(Long memberId);
 
