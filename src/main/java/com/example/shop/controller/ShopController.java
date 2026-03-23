@@ -75,6 +75,14 @@ public class ShopController {
         return shopService.getWishlist(memberId);
     }
 
+    @DeleteMapping("/wishlist/{productId}")
+    public void removeFromWishlist(
+            @RequestHeader("X-User-Id") Long memberId,
+            @PathVariable(name = "productId") Long productId) {
+        log.info("삭제 요청 - 회원: {}, 상품: {}", memberId, productId);
+        shopService.removeFromWishlist(memberId, productId);
+    }
+
     // 장바구니 상품 추가
     @PostMapping("/cart")
     public CartResponseDTO addToCart(
