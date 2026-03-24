@@ -65,6 +65,7 @@ public class ShopServiceImpl implements ShopService {
     private final OrderRepository orderRepository;
     private final WishlistRepository wishlistRepository;
     private final ApprovalRepository approvalRepository;
+    private final com.example.shop.repository.ReviewRepository reviewRepository; // ✅ 추가
     private final RabbitTemplate rabbitTemplate;
     private final ProductMessageProducer productMessageProducer;
 
@@ -77,7 +78,7 @@ public class ShopServiceImpl implements ShopService {
     public List<ProductResponseDTO> getProducts() {
         // ✅ findAll() → findByIsActive(true) : 판매 중 상품만 조회
         return productRepository.findByIsActive(true).stream()
-                .map(ProductResponseDTO::fromEntity)
+                .map(this::toProductResponseDTO)
                 .collect(Collectors.toList());
     }
 
@@ -86,7 +87,26 @@ public class ShopServiceImpl implements ShopService {
     public ProductResponseDTO getProduct(String productId) {
         Product product = productRepository.findById(Long.parseLong(productId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        return ProductResponseDTO.fromEntity(product);
+        return toProductResponseDTO(product);
+    }
+
+    // Product 엔티티를 DTO로 변환하면서 리뷰 정보 추가
+    private ProductResponseDTO toProductResponseDTO(Product product) {
+        ProductResponseDTO dto = ProductResponseDTO.fromEntity(product);
+        List<com.example.shop.entity.Review> reviews = reviewRepository.findByProductIdOrderByCreatedAtDesc(product.getProductId());
+        
+        if (!reviews.isEmpty()) {
+            double avg = reviews.stream()
+                    .mapToInt(com.example.shop.entity.Review::getRating)
+                    .average()
+                    .orElse(0.0);
+            dto.setAverageRating(Math.round(avg * 10.0) / 10.0);
+            dto.setReviewCount((long) reviews.size());
+        } else {
+            dto.setAverageRating(0.0);
+            dto.setReviewCount(0L);
+        }
+        return dto;
     }
 
     @Override
@@ -401,5 +421,75 @@ public class ShopServiceImpl implements ShopService {
         Wishlist wishlist = wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WISHLIST_NOT_FOUND));
         wishlistRepository.delete(wishlist);
+    }
+
+    // ======================== 추가 기능 구현 ========================
+    @Override
+    @Transactional
+    public void deleteOrder(Long memberId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (!order.getMemberId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        orderRepository.delete(order);
+        log.info(">>>> [주문 삭제 완료] 주문번호: {}, 회원: {}", orderId, memberId);
+    }
+
+    @Override
+    @Transactional
+    public void createReview(Long memberId, Long productId, Integer rating, String comment, MultipartFile reviewImage) {
+        // 상품 존재 여부 확인 필수
+        productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        String imageUrl = null;
+        if (reviewImage != null && !reviewImage.isEmpty()) {
+            try {
+                String fileName = UUID.randomUUID() + "_" + reviewImage.getOriginalFilename();
+                Path uploadPath = Paths.get(uploadDir).resolve("reviews");
+
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                Files.copy(reviewImage.getInputStream(),
+                        uploadPath.resolve(fileName),
+                        StandardCopyOption.REPLACE_EXISTING);
+
+                imageUrl = "/images/shop/reviews/" + fileName;
+            } catch (IOException e) {
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_ERROR);
+            }
+        }
+
+        com.example.shop.entity.Review review = com.example.shop.entity.Review.builder()
+                .memberId(memberId)
+                .productId(productId)
+                .rating(rating)
+                .comment(comment)
+                .imageUrl(imageUrl)
+                .build();
+
+        reviewRepository.save(review);
+        log.info(">>>> [리뷰 작성 완료] 상품: {}, 회원: {}, 별점: {}, 이미지여부: {}", productId, memberId, rating, imageUrl != null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.example.shop.dto.response.ReviewResponseDTO> getProductReviews(Long productId) {
+        return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).stream()
+                .map(r -> com.example.shop.dto.response.ReviewResponseDTO.builder()
+                        .reviewId(r.getReviewId())
+                        .memberId(r.getMemberId())
+                        .productId(r.getProductId())
+                        .rating(r.getRating())
+                        .comment(r.getComment())
+                        .imageUrl(r.getImageUrl())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

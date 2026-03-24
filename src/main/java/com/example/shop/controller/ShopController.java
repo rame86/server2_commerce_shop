@@ -146,4 +146,33 @@ public class ShopController {
         return shopService.checkout(memberId, requestDto);
     }
 
+    // 주문 내역 삭제
+    @DeleteMapping("/order/{orderId}")
+    public void deleteOrder(
+            @RequestHeader("X-User-Id") Long memberId,
+            @PathVariable(name = "orderId") Long orderId) {
+        log.info("주문 삭제 요청 - 회원: {}, 주문번호: {}", memberId, orderId);
+        shopService.deleteOrder(memberId, orderId);
+    }
+
+    // 리뷰 작성
+    @PostMapping(value = "/review", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public void createReview(
+            @RequestHeader("X-User-Id") Long memberId,
+            @RequestParam("productId") Long productId,
+            @RequestParam("rating") Integer rating,
+            @RequestParam("comment") String comment,
+            @RequestParam(value = "image", required = false) org.springframework.web.multipart.MultipartFile image) {
+        log.info("리뷰 작성 요청 - 회원: {}, 상품: {}, 별점: {}, 이미지 존재 여부: {}", memberId, productId, rating, image != null);
+        shopService.createReview(memberId, productId, rating, comment, image);
+    }
+
+    // 상품별 리뷰 목록 조회
+    @GetMapping("/product/{productId}/reviews")
+    public List<com.example.shop.dto.response.ReviewResponseDTO> getProductReviews(
+            @PathVariable(name = "productId") Long productId) {
+        log.info("상품 리뷰 조회 요청 - 상품: {}", productId);
+        return shopService.getProductReviews(productId);
+    }
+
 }
