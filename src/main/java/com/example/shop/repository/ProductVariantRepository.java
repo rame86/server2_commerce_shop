@@ -8,5 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.example.shop.entity.ProductVariant;
 
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, UUID> {
-    // variant_id가 UUID이므로 기본 findById(UUID) 그대로 사용
+    // 특정 상품의 모든 옵션 조회
+    java.util.List<ProductVariant> findByProduct_ProductId(Long productId);
 }

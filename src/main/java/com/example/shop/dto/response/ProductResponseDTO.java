@@ -27,6 +27,19 @@ public class ProductResponseDTO {
 
     // ✅ 기존 상품 엔티티 변환
     public static ProductResponseDTO fromEntity(Product product) {
+        String imageUrl = product.getImageUrl();
+
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            // 1. 슬래시(/)와 백슬래시(\) 중 마지막 구분자의 위치를 찾습니다.
+            int lastSlash = Math.max(imageUrl.lastIndexOf("/"), imageUrl.lastIndexOf("\\"));
+
+            // 2. 구분자가 있다면 파일명만 추출하고, 없다면 전체를 파일명으로 간주합니다.
+            String fileName = (lastSlash != -1) ? imageUrl.substring(lastSlash + 1) : imageUrl;
+
+            // 3. 브라우저가 접근 가능한 웹 경로(/images/...)로 강제 변환합니다.
+            imageUrl = "/images/" + fileName;
+        }
+
         return ProductResponseDTO.builder()
                 .productId(product.getProductId())
                 .sellerId(product.getSellerId())
@@ -34,7 +47,7 @@ public class ProductResponseDTO {
                 .category(product.getCategory() != null ? product.getCategory().name() : null)
                 .title(product.getTitle())
                 .description(product.getDescription())
-                .imageUrl(product.getImageUrl())
+                .imageUrl(imageUrl)
                 .basePrice(product.getBasePrice())
                 .isActive(product.getIsActive())
                 .createdAt(product.getCreatedAt())
@@ -44,6 +57,8 @@ public class ProductResponseDTO {
 
     // ✅ 승인 요청 엔티티 변환 (Enum 타입을 String으로 변환 로직 추가)
     public static ProductResponseDTO fromApproval(Approval approval) {
+        String imageUrl = approval.getImageUrl();
+
         return ProductResponseDTO.builder()
                 .productId(null)
                 .sellerId(approval.getRequesterId())
@@ -52,7 +67,7 @@ public class ProductResponseDTO {
                 .category(approval.getGoodsType() != null ? approval.getGoodsType().name() : null)
                 .title(approval.getGoodsName())
                 .description(approval.getDescription())
-                .imageUrl(approval.getImageUrl())
+                .imageUrl(imageUrl)
                 .basePrice(approval.getPrice())
                 .isActive(false)
                 .createdAt(approval.getCreatedAt())
