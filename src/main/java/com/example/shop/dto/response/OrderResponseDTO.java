@@ -46,7 +46,7 @@ public class OrderResponseDTO {
             if (imageUrl != null && !imageUrl.isEmpty()) {
                 int lastSlash = Math.max(imageUrl.lastIndexOf("/"), imageUrl.lastIndexOf("\\"));
                 String fileName = (lastSlash != -1) ? imageUrl.substring(lastSlash + 1) : imageUrl;
-                imageUrl = "/images/" + fileName;
+                imageUrl = "/images/shop/" + fileName;
             }
 
             return OrderItemDto.builder()

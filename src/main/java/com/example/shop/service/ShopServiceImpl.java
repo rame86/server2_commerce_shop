@@ -116,7 +116,7 @@ public class ShopServiceImpl implements ShopService {
                 // 4. URL 생성 (중요!)
                 // 설정하신 spring.mvc.static-path-pattern 이 /images/** 이므로
                 // 호출 경로는 /images/파일명 형태가 되어야 합니다.
-                imageUrl = "/images/" + fileName;
+                imageUrl = "/images/shop/" + fileName;
 
             } catch (IOException e) {
                 // 예외 처리 (기존 BusinessException 활용)
