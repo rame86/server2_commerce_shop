@@ -41,13 +41,21 @@ public class OrderResponseDTO {
 
         public static OrderItemDto fromEntity(OrderItem item) {
             BigDecimal unitPrice = item.getUnitPrice(); // ✅ getPrice() → getUnitPrice()
+            
+            String imageUrl = item.getVariant().getProduct().getImageUrl();
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                int lastSlash = Math.max(imageUrl.lastIndexOf("/"), imageUrl.lastIndexOf("\\"));
+                String fileName = (lastSlash != -1) ? imageUrl.substring(lastSlash + 1) : imageUrl;
+                imageUrl = "/images/" + fileName;
+            }
+
             return OrderItemDto.builder()
                     .orderItemId(item.getOrderItemId().toString())
                     .variantId(item.getVariant().getVariantId().toString()) // ✅ variant FK 기준
                     .color(item.getVariant().getColor())
                     .size(item.getVariant().getSize())
                     .title(item.getVariant().getProduct().getTitle()) // ✅ variant→product 조인
-                    .imageUrl(item.getVariant().getProduct().getImageUrl())
+                    .imageUrl(imageUrl)
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
                     .subtotal(unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())))
