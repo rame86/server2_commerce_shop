@@ -62,6 +62,9 @@ public class Approval extends BaseTimeEntity {
     @Column(name = "size", length = 50)
     private String size;
 
+    @Column(name = "item_category", length = 100)
+    private String itemCategory;
+
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity;
 
@@ -80,7 +83,7 @@ public class Approval extends BaseTimeEntity {
     @Builder
     public Approval(Long requesterId, String requesterName,
             String goodsName, ProductCategory goodsType, String description,
-            java.math.BigDecimal price, String color, String size,
+            java.math.BigDecimal price, String color, String size, String itemCategory,
             Integer stockQuantity, String imageUrl) {
         this.requesterId = requesterId;
         this.requesterName = requesterName;
@@ -90,6 +93,7 @@ public class Approval extends BaseTimeEntity {
         this.price = price;
         this.color = color;
         this.size = size;
+        this.itemCategory = itemCategory;
         this.stockQuantity = stockQuantity != null ? stockQuantity : 0;
         this.imageUrl = imageUrl;
         this.productId = null;

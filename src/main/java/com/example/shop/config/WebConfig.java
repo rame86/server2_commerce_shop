@@ -14,7 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
         // 2. 실제 파일 위치: file:/app/resources/static/images/shop/
         // 반드시 경로 끝에 '/'를 붙여주세요.
         registry.addResourceHandler("/images/shop/**")
-                .addResourceLocations("file:/app/resources/static/images/shop/");
+                .addResourceLocations("classpath:/static/images/shop/");
 
         // favicon 에러 방지용 설정 추가
         registry.addResourceHandler("/favicon.ico")

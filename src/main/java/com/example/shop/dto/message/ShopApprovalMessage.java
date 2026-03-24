@@ -11,6 +11,7 @@ public record ShopApprovalMessage(
         BigDecimal price,       // ✅ Integer → BigDecimal (DB: NUMERIC(15,2))
         String color,           // ✅ 신규 (DB: color)
         String size,            // ✅ 신규 (DB: size)
+        String itemCategory,    // ✅ 신규 (추가)
         Integer stockQuantity,  // ✅ stock → stockQuantity (DB: stock_quantity)
         String imageUrl         // 이미지 URL
 ) {}
