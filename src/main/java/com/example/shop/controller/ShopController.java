@@ -139,11 +139,11 @@ public class ShopController {
 
     // 결제 프로세스 시작 (체크아웃)
     @PostMapping("/checkout")
-    public String checkout(@RequestHeader("X-User-Id") Long memberId) {
-        log.info("결제 요청 - 회원: {}", memberId);
-        // 실제 결제 로직(PG사 연동 등)이 들어가는 지점입니다.
-        // 현재는 간단한 메시지나 결제 준비 상태 반환으로 처리합니다.
-        return "결제가 성공적으로 처리되었습니다.";
+    public String checkout(
+            @RequestHeader("X-User-Id") Long memberId,
+            @RequestBody com.example.shop.dto.request.CheckoutRequestDTO requestDto) {
+        log.info("결제 요청 - 회원: {}, 상품: {}, 수량: {}", memberId, requestDto.getProductId(), requestDto.getQuantity());
+        return shopService.checkout(memberId, requestDto);
     }
 
 }
