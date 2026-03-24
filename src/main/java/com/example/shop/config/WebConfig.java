@@ -7,9 +7,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 // 이 설정이 있어야 브라우저에서 /images/aaa.jpg 로 접속했을 때 D:/shop/images/aaa.jpg를 보여줌
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // /images/shop/ 으로 시작하는 요청은 해당 물리 폴더에서 찾음
+        // 1. 요청 URL 패턴: /images/shop/banner.png 등
+        // 2. 실제 파일 위치: file:/app/resources/static/images/shop/
+        // 반드시 경로 끝에 '/'를 붙여주세요.
         registry.addResourceHandler("/images/shop/**")
                 .addResourceLocations("file:/app/resources/static/images/shop/");
 
