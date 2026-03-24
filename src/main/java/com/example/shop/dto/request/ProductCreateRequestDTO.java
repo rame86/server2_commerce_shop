@@ -14,6 +14,9 @@ public class ProductCreateRequestDTO {
     private BigDecimal price;
     private String goodsType;
     private String requesterName;
+    private String color;
+    private String size;
+    private String itemCategory;
     private List<VariantDTO> variants;
 
     @Getter

@@ -67,6 +67,15 @@ public class Product extends BaseTimeEntity {
     @Column(name = "base_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(name = "item_category", length = 100)
+    private String itemCategory;
+
+    @Column(name = "color", length = 50)
+    private String color;
+
+    @Column(name = "size", length = 50)
+    private String size;
+
     // ✅ status(String) → is_active(Boolean) 으로 변경 (DB 기준 Soft Delete)
     @Column(name = "is_active", nullable = false)
     @Builder.Default
