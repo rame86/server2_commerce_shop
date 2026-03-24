@@ -41,7 +41,7 @@ public class Product extends BaseTimeEntity {
 
     // 판매자 유형 (아티스트 / 일반유저)
     @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class) 
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "seller_type", nullable = false)
     private SellerType sellerType;
 
@@ -66,8 +66,8 @@ public class Product extends BaseTimeEntity {
     // ✅ base_price 로 컬럼명 변경 (DB 기준)
     @Column(name = "base_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePrice;
-
-    @Column(name = "item_category", length = 100)
+    
+    @Column(name = "item_category")
     private String itemCategory;
 
     @Column(name = "color", length = 50)
