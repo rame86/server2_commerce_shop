@@ -144,13 +144,15 @@ public class ShopServiceImpl implements ShopService {
             }
         }
         // ✅ 엔티티 빌더 부분 수정
-        String color = null;
-        String size = null;
+        String color = requestDto.getColor();
+        String size = requestDto.getSize();
+        String itemCategory = requestDto.getItemCategory();
         Integer stockQuantity = 0;
+
         if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
             ProductCreateRequestDTO.VariantDTO firstVariant = requestDto.getVariants().get(0);
-            color = firstVariant.getColor();
-            size = firstVariant.getSize();
+            if (color == null) color = firstVariant.getColor();
+            if (size == null) size = firstVariant.getSize();
             stockQuantity = firstVariant.getStockQuantity();
         }
 
@@ -158,16 +160,19 @@ public class ShopServiceImpl implements ShopService {
                 .requesterId(memberId)
                 .requesterName(requestDto.getRequesterName())
                 .goodsName(requestDto.getGoodsName())
-                // requestDto.getGoodsType()이 String이라면 아래와 같이 변환 필요
                 .goodsType(ProductCategory.valueOf(requestDto.getGoodsType()))
                 .description(requestDto.getDescription())
                 .price(requestDto.getPrice())
                 .color(color)
                 .size(size)
+                .itemCategory(itemCategory)
                 .stockQuantity(stockQuantity)
                 .imageUrl(imageUrl)
-                // .status(ApprovalStatus)
                 .build();
+
+        // ✅ [CRITICAL] DB 저장 로직 추가 (영속화)
+        approvalRequest = approvalRepository.save(approvalRequest);
+        log.info(">>>> [Approval 저장 완료] ID: {}, 상품명: {}", approvalRequest.getApprovalId(), approvalRequest.getGoodsName());
 
         log.info(">>>> [RabbitMQ 전송 시도] RoutingKey: {}, Data: {}",
                 RabbitMQConfig.ROUTING_KEY, approvalRequest.getGoodsName());
@@ -181,6 +186,7 @@ public class ShopServiceImpl implements ShopService {
                 approvalRequest.getPrice(),
                 approvalRequest.getColor(),
                 approvalRequest.getSize(),
+                approvalRequest.getItemCategory(),
                 approvalRequest.getStockQuantity(),
                 approvalRequest.getImageUrl());
 
