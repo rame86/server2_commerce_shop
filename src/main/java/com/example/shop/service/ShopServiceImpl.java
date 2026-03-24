@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -171,10 +172,10 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional
     public void deleteProduct(Long memberId, String productId) {
-        // ✅ Hard Delete 대신 Soft Delete (is_active = false)
-        Product product = productRepository.findById(Long.parseLong(productId))
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        // product.deactivate(); // Product에 deactivate() 메서드 추가 권장
+        // ✅ 존재 여부 확인 후 삭제
+        if (!productRepository.existsById(Long.parseLong(productId))) {
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
         productRepository.deleteById(Long.parseLong(productId));
     }
 
@@ -199,7 +200,6 @@ public class ShopServiceImpl implements ShopService {
         BigDecimal feePercentage = new BigDecimal("0.10"); // 기본 10% (OFFICIAL)
         String eventTitle = "";
         Long sellerId = null; // ✅ artistId -> sellerId로 변경
-        int totalQuantity = 0;
 
         // 2. 주문 상품 상세 처리 (DB: order_items 테이블)
         for (int i = 0; i < requestDto.getItems().size(); i++) {
@@ -227,7 +227,6 @@ public class ShopServiceImpl implements ShopService {
                     .build();
 
             order.addOrderItem(orderItem);
-            totalQuantity += itemDto.getQuantity();
 
             if (i == 0) {
                 eventTitle = product.getTitle()
@@ -246,9 +245,16 @@ public class ShopServiceImpl implements ShopService {
         paymentEvent.setMemberId(memberId);
         paymentEvent.setArtistId(sellerId); // ✅ DTO의 필드명도 sellerId로 맞추는 것을 권장합니다.
         paymentEvent.setAmount(savedOrder.getTotalAmount());
+
+        // 🌟 [중요] SettlementService(결제 서버)는 originalPrice * quantity 로 정산액을 계산함.
+        // 여러 품목이 섞인 SHOP 주문의 경우, 전체 합계(totalAmount)를 originalPrice로 보내고
+        // quantity를 1로 고정하여 정산액이 꼬이지 않게 함 (예매 서비스 패턴 참고).
         paymentEvent.setOriginalPrice(savedOrder.getTotalAmount());
-        paymentEvent.setQuantity(totalQuantity);
-        paymentEvent.setFee(feePercentage);
+        paymentEvent.setQuantity(1);
+
+        // 🌟 [수정] 수수료는 0.10이 아니라 10(%) 처럼 정수로 보내야 결제 서버에서 정확히 계산됨 (divide(100) 대응)
+        paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));
+
         paymentEvent.setEventTitle(eventTitle);
         paymentEvent.setReplyRoutingKey(RabbitMQConfig.SHOP_PAY_REPLY_ROUTING_KEY);
 
@@ -279,10 +285,35 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional
-    public String checkout(Long memberId) {
-        // 결제 완료 후 장바구니 비우기
-        cartRepository.findByMemberId(memberId).ifPresent(cartRepository::delete);
-        return "결제가 완료되었습니다.";
+    public String checkout(Long memberId, com.example.shop.dto.request.CheckoutRequestDTO requestDto) {
+        log.info(">>>> [체크아웃 시작] 회원: {}, 상품: {}, 수량: {}", memberId, requestDto.getProductId(), requestDto.getQuantity());
+
+        // 1. 해당 상품의 기본 Variant 정보를 찾아야 함 (현재 스키마상 Variant ID를 모르므로 첫 번째 활성 Variant 사용)
+        productRepository.findById(requestDto.getProductId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        List<ProductVariant> variants = productVariantRepository.findByProduct_ProductId(requestDto.getProductId());
+
+        if (variants == null || variants.isEmpty()) {
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        ProductVariant variant = variants.get(0); // 기본 옵션 선택
+
+        // 2. OrderCreateRequestDTO 조립
+        OrderItemDTO itemDto = new OrderItemDTO();
+        itemDto.setVariantId(variant.getVariantId().toString());
+        itemDto.setQuantity(requestDto.getQuantity());
+
+        OrderCreateRequestDTO orderReq = new OrderCreateRequestDTO();
+        orderReq.setItems(Collections.singletonList(itemDto));
+        orderReq.setShippingAddress("기본 배송지 (체크아웃)"); // 필요시 프론트에서 받아야 함
+
+        // 3. 주문 생성 (여기서 결제 요청 MQ까지 발송됨)
+        OrderResponseDTO orderResponse = createOrder(memberId, orderReq);
+
+        log.info(">>>> [체크아웃 완료] 주문번호: {}", orderResponse.getOrderId());
+        return "결제가 요청되었습니다. 주문번호: " + orderResponse.getOrderId();
     }
 
     // ======================== 장바구니 관련 ========================

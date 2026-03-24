@@ -33,7 +33,7 @@ public interface ShopService {
     // 주문 상세 조회
     OrderResponseDTO getOrder(Long memberId, String orderId);
     // 결제 처리 (체크아웃)
-    String checkout(Long memberId);
+    String checkout(Long memberId, com.example.shop.dto.request.CheckoutRequestDTO requestDto);
 
     // ======================== 장바구니 관련 ========================
     // 장바구니 조회
