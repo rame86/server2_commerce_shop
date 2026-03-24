@@ -19,19 +19,23 @@ public interface ShopService {
 
     ProductResponseDTO getProduct(String productId);
 
-    ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto, MultipartFile imageFile);
+    ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto,
+            MultipartFile imageFile);
 
     void deleteProduct(Long memberId, String productId);
-    
+
     List<Approval> getPendingApprovals();
 
     // ======================== 주문 관련 ========================
     // 주문 생성 및 결제 큐 전송
     OrderResponseDTO createOrder(Long memberId, OrderCreateRequestDTO requestDto);
+
     // 내 주문 목록 조회 (페이징)
     List<OrderResponseDTO> getMyOrders(Long memberId, int page, int size);
+
     // 주문 상세 조회
     OrderResponseDTO getOrder(Long memberId, String orderId);
+
     // 결제 처리 (체크아웃)
     String checkout(Long memberId, com.example.shop.dto.request.CheckoutRequestDTO requestDto);
 
@@ -51,4 +55,11 @@ public interface ShopService {
     WishlistResponseDTO addToWishlist(Long memberId, Long productId);
 
     void removeFromWishlist(Long memberId, Long productId);
+
+    // ======================== 추가 기능(주문내역삭제, 리뷰등록/조회 ) ========================
+    void deleteOrder(Long memberId, Long orderId);
+
+    void createReview(Long memberId, Long productId, Integer rating, String comment, MultipartFile reviewImage);
+
+    List<com.example.shop.dto.response.ReviewResponseDTO> getProductReviews(Long productId);
 }

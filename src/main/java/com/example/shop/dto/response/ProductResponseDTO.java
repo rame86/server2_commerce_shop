@@ -6,10 +6,16 @@ import java.time.LocalDateTime;
 import com.example.shop.entity.Approval;
 import com.example.shop.entity.Product;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ProductResponseDTO {
 
@@ -20,6 +26,8 @@ public class ProductResponseDTO {
     private String title;
     private String description;
     private String imageUrl;
+    private Double averageRating;
+    private Long reviewCount;
     private BigDecimal basePrice;
     private Boolean isActive;
     private LocalDateTime createdAt;
@@ -36,8 +44,8 @@ public class ProductResponseDTO {
             // 2. 구분자가 있다면 파일명만 추출하고, 없다면 전체를 파일명으로 간주합니다.
             String fileName = (lastSlash != -1) ? imageUrl.substring(lastSlash + 1) : imageUrl;
 
-            // 3. 브라우저가 접근 가능한 웹 경로(/images/...)로 강제 변환합니다.
-            imageUrl = "/images/" + fileName;
+            // 3. 브라우저가 접근 가능한 웹 경로(/images/shop/...)로 강제 변환합니다.
+            imageUrl = "/images/shop/" + fileName;
         }
 
         return ProductResponseDTO.builder()
