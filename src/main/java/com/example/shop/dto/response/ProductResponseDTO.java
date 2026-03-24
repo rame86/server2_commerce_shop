@@ -36,8 +36,8 @@ public class ProductResponseDTO {
             // 2. 구분자가 있다면 파일명만 추출하고, 없다면 전체를 파일명으로 간주합니다.
             String fileName = (lastSlash != -1) ? imageUrl.substring(lastSlash + 1) : imageUrl;
 
-            // 3. 브라우저가 접근 가능한 웹 경로(/images/...)로 강제 변환합니다.
-            imageUrl = "/images/" + fileName;
+            // 3. 브라우저가 접근 가능한 웹 경로(/images/shop/...)로 강제 변환합니다.
+            imageUrl = "/images/shop/" + fileName;
         }
 
         return ProductResponseDTO.builder()
