@@ -1,3 +1,12 @@
-GET http://34.64.85.123/msa/shop/admin/approval-list
+# GET http://34.64.85.123/msa/shop/admin/approval-list
+# Content-Type: application/json 
+# Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMzg3MywiZXhwIjoxNzc0NDM3NDczfQ.ooTtMhSabs2BLF2As4B_tbuuBa2GjPTvMKs-aojU9ovC1aeAcpnlqzh6sLpErDcP
+
+POST http://34.64.85.123/msa/shop/admin//product-approval
 Content-Type: application/json 
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMzg3MywiZXhwIjoxNzc0NDM3NDczfQ.ooTtMhSabs2BLF2As4B_tbuuBa2GjPTvMKs-aojU9ovC1aeAcpnlqzh6sLpErDcP
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzNDgzMiwiZXhwIjoxNzc0NDM4NDMyfQ.YISdBG8sK19dgzOfDmigG_XdnynAxAW7H1MI3PL7vw001hd2beiBj0fYlY4zfkf3
+
+{
+    "productId":19
+    ,"isApproved":true
+}

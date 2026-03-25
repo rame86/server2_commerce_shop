@@ -54,12 +54,12 @@ public class ShopApprovalServiceImpl implements ShopApprovalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.APPROVAL_NOT_FOUND));
 
         if (isApproved) {
-            approval.updateStatus(ApprovalStatus.CONFIRMED, "관리자 승인 완료");
+            approval.updateStatus(ApprovalStatus.CONFIRMED, "승인 완료");
             // [수정] setIsActive() 대신 Product 엔티티에 정의된 비즈니스 메서드 사용
             product.updateActiveStatus(true);
             log.info(">>>> [상품 승인 완료] Product ID: {}", productId);
         } else {
-            approval.updateStatus(ApprovalStatus.FAILED, "관리자 승인 거절");
+            approval.updateStatus(ApprovalStatus.FAILED, "승인 거절. 관리자에게 문의하세요.");
             // [수정] setIsActive() 대신 Product 엔티티에 정의된 비즈니스 메서드 사용
             product.updateActiveStatus(false);
             log.info(">>>> [상품 승인 거절] Product ID: {}", productId);
