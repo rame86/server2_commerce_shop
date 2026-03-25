@@ -209,7 +209,7 @@ public class ShopServiceImpl implements ShopService {
                 .build();
 
         approvalRequest.linkProduct(product.getProductId()); // 생성된 상품 ID 연결
-        approvalRequest.updateStatus(ApprovalStatus.CONFIRMED, "자동 승인 완료"); // CONFIRMED 상태로 즉시 변경
+        approvalRequest.updateStatus(ApprovalStatus.PENDING, "승인 대기중");
 
         approvalRequest = approvalRepository.save(approvalRequest);
 
