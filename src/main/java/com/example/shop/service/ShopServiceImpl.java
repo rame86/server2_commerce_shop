@@ -1,6 +1,9 @@
 package com.example.shop.service;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -8,8 +11,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.common.exception.BusinessException;
@@ -63,6 +68,11 @@ public class ShopServiceImpl implements ShopService {
     private final RabbitTemplate rabbitTemplate;
     private final ProductMessageProducer productMessageProducer;
 
+
+    @Value("${shop.image.upload-path}")
+    private String uploadPath;
+
+    
     // ======================== 상품 관련 ========================
     @Override
     @Transactional(readOnly = true)
@@ -107,14 +117,37 @@ public class ShopServiceImpl implements ShopService {
             MultipartFile imageFile) {
         log.info("======= 서비스 로직 진입 완료 =======");
 
-        // [수정] 물리적 파일 저장 로직 제거
-        String imageUrl = null;
+        
+       String imageUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
-            // 실제 파일을 저장하지 않고, DB 기록을 위해 파일명만 생성하여 유지합니다.
-            imageUrl = "/images/shop/" + UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
+            // 1. [보안] 원본 파일명에서 경로 조작 문자(../ 등) 제거 및 순수 파일명 추출
+            String originalFilename = StringUtils.cleanPath(imageFile.getOriginalFilename());
+            String safeFilename = Paths.get(originalFilename).getFileName().toString();
+            
+            // 2. 고유 파일명 생성
+            String uniqueFileName = UUID.randomUUID() + "_" + safeFilename;
+            imageUrl = "/images/shop/" + uniqueFileName;
+
+            // 3. 물리적 파일 저장 로직
+            try {
+                File uploadDir = new File(uploadPath);
+                // 디렉토리가 존재하지 않으면 생성 (부모 디렉토리 포함)
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdirs(); 
+                }
+                
+                // 지정된 경로에 실제 파일 저장
+                File saveFile = new File(uploadPath, uniqueFileName);
+                imageFile.transferTo(saveFile);
+                log.info(">>>> [파일 저장 완료] 경로: {}", saveFile.getAbsolutePath());
+            } catch (IOException e) {
+                log.error(">>>> [파일 저장 실패] 파일명: {}", uniqueFileName, e);
+                // 파일 저장이 필수라면 여기서 예외를 던져 트랜잭션을 롤백시킵니다.
+                throw new RuntimeException("이미지 파일 저장 중 오류가 발생했습니다."); 
+            }
         }
 
-        // ✅ 엔티티 빌더 부분
+        // 엔티티 빌더 부분
         String color = requestDto.getColor();
         String size = requestDto.getSize();
         String itemCategory = requestDto.getItemCategory();
