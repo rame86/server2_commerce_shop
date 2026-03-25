@@ -1,10 +1,10 @@
-package com.example.admin.service;
+package com.example.shop.admin.service;
 
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.example.admin.dto.ProductApprovalDTO;
+import com.example.shop.admin.dto.ProductApprovalDTO;
 import com.example.shop.service.ShopService;
 import com.example.shop.service.response.ShopApprovalService;
 

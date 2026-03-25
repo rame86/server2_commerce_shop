@@ -1,4 +1,8 @@
-GET http://34.64.85.123/msa/shop/admin/approval-list
+# GET http://34.64.85.123/msa/shop/admin/approval-list
+# Content-Type: application/json 
+# Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMTIzNiwiZXhwIjoxNzc0NDM0ODM2fQ.nHbRWIGzvrsyqLg2Hw0zDREVVoOioSeOHRTF83COdlBp-w8JH3UJUOfJd588F4Tz
+
+GET http://localhost/msa/shop/admin/approval-list
 Content-Type: application/json 
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMDQ5NSwiZXhwIjoxNzc0NDM0MDk1fQ.BgcIw0KW7RMi-9P7hxgjh4EWIb6E2XktBjPOhZy1WRbYgV7CIeVp7nawZb8cCt-W
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMTIzNiwiZXhwIjoxNzc0NDM0ODM2fQ.nHbRWIGzvrsyqLg2Hw0zDREVVoOioSeOHRTF83COdlBp-w8JH3UJUOfJd588F4Tz
 

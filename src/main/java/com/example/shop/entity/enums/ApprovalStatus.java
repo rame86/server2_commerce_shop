@@ -1,4 +1,4 @@
-package com.example.shop.entity;
+package com.example.shop.entity.enums;
 
 public enum ApprovalStatus {
     PENDING,   // 대기

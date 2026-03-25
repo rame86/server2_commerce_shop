@@ -3,6 +3,10 @@ package com.example.shop.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+
+import com.example.shop.entity.enums.ApprovalStatus;
 import com.example.shop.entity.enums.ProductCategory;
 
 import jakarta.persistence.Column;
@@ -47,6 +51,7 @@ public class Approval {
     private String goodsName;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "goods_type", nullable = false)
     private ProductCategory goodsType;
 
@@ -71,6 +76,7 @@ public class Approval {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "status", nullable = false)
     private ApprovalStatus status = ApprovalStatus.PENDING;
 

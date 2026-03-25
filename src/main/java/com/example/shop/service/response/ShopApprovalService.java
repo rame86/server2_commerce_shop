@@ -2,7 +2,7 @@ package com.example.shop.service.response;
 
 import java.util.List;
 
-import com.example.admin.dto.ProductApprovalDTO;
+import com.example.shop.admin.dto.ProductApprovalDTO;
 
 public interface ShopApprovalService {
         // ======================== 관리자 승인 관련 ========================
