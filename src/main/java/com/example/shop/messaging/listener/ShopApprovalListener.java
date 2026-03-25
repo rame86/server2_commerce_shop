@@ -9,6 +9,7 @@ import com.example.shop.entity.Approval;
 import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.repository.ShopApprovalRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,6 +21,7 @@ public class ShopApprovalListener {
     private final ShopApprovalRepository shopApprovalRepository;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
+    @Transactional
     public void receiveApprovalMessage(ShopApprovalMessage message) {
         log.info("승인 요청 메시지 수신: {}", message.goodsName());
 
