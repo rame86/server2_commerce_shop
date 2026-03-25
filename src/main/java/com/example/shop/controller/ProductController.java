@@ -52,13 +52,7 @@ public class ProductController {
         return shopService.getProducts();
     }
 
-    /*************************************************************/
-    // 관리자
-    /*************************************************************/
-    /**
-     * [공식 굿즈 등록 - 관리자 전용]
-     * POST /product/official
-     */
+    // 상품등록
     @PostMapping(value = "/official", consumes = { "multipart/form-data", "application/json" })
     public ProductResponseDTO createOfficial(
             @RequestHeader(value = "X-User-Id", defaultValue = "1") Long memberId,
@@ -70,16 +64,6 @@ public class ProductController {
         return response;
     }
 
-    /** [공식 굿즈 삭제] */
-    @DeleteMapping("/official/{productId}")
-    public void deleteOfficial(@PathVariable String productId) {
-        shopService.deleteProduct(1L, productId);
-    }
-
-    /*************************************************************/
-    // 유저
-    /*************************************************************/
-    /** [중고 굿즈 등록] */
     @PostMapping(value = "/secondhand", consumes = { "multipart/form-data", "application/json" })
     public ProductResponseDTO createSecondhand(
             @RequestHeader(value = "X-User-Id", defaultValue = "2") Long memberId,
@@ -108,4 +92,9 @@ public class ProductController {
         shopService.deleteProduct(1L, productId);
     }
 
+    /** [공식 굿즈 삭제] */
+    @DeleteMapping("/official/{productId}")
+    public void deleteOfficial(@PathVariable String productId) {
+        shopService.deleteProduct(1L, productId);
+    }
 }
