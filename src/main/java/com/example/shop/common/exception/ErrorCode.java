@@ -22,6 +22,7 @@ public enum ErrorCode {
     CART_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니를 찾을 수 없습니다."),
     CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니 상품을 찾을 수 없습니다."),
     WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "찜목록 항목을 찾을 수 없습니다."),
+    APPROVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "승인목록을 찾을 수 없습니다."),
     
     // 기타
     FILE_UPLOAD_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다.");

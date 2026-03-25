@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.shop.admin.dto.ProductApprovalDTO;
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
 import com.example.shop.config.RabbitMQConfig;
@@ -29,7 +30,6 @@ import com.example.shop.dto.response.OrderResponseDTO;
 import com.example.shop.dto.response.ProductResponseDTO;
 import com.example.shop.dto.response.WishlistResponseDTO;
 import com.example.shop.entity.Approval;
-import com.example.shop.entity.ApprovalStatus;
 import com.example.shop.entity.Cart;
 import com.example.shop.entity.CartItem;
 import com.example.shop.entity.Order;
@@ -38,6 +38,7 @@ import com.example.shop.entity.OrderStatus;
 import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductVariant;
 import com.example.shop.entity.Wishlist;
+import com.example.shop.entity.enums.ApprovalStatus;
 import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.entity.enums.SellerType;
 import com.example.shop.messaging.producer.ProductMessageProducer;
@@ -68,11 +69,9 @@ public class ShopServiceImpl implements ShopService {
     private final RabbitTemplate rabbitTemplate;
     private final ProductMessageProducer productMessageProducer;
 
-
     @Value("${shop.image.upload-path}")
     private String uploadPath;
 
-    
     // ======================== 상품 관련 ========================
     @Override
     @Transactional(readOnly = true)
@@ -117,13 +116,12 @@ public class ShopServiceImpl implements ShopService {
             MultipartFile imageFile) {
         log.info("======= 서비스 로직 진입 완료 =======");
 
-        
-       String imageUrl = null;
+        String imageUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
             // 1. [보안] 원본 파일명에서 경로 조작 문자(../ 등) 제거 및 순수 파일명 추출
             String originalFilename = StringUtils.cleanPath(imageFile.getOriginalFilename());
             String safeFilename = Paths.get(originalFilename).getFileName().toString();
-            
+
             // 2. 고유 파일명 생성
             String uniqueFileName = UUID.randomUUID() + "_" + safeFilename;
             imageUrl = "/images/shop/" + uniqueFileName;
@@ -133,9 +131,9 @@ public class ShopServiceImpl implements ShopService {
                 File uploadDir = new File(uploadPath);
                 // 디렉토리가 존재하지 않으면 생성 (부모 디렉토리 포함)
                 if (!uploadDir.exists()) {
-                    uploadDir.mkdirs(); 
+                    uploadDir.mkdirs();
                 }
-                
+
                 // 지정된 경로에 실제 파일 저장
                 File saveFile = new File(uploadPath, uniqueFileName);
                 imageFile.transferTo(saveFile);
@@ -143,7 +141,7 @@ public class ShopServiceImpl implements ShopService {
             } catch (IOException e) {
                 log.error(">>>> [파일 저장 실패] 파일명: {}", uniqueFileName, e);
                 // 파일 저장이 필수라면 여기서 예외를 던져 트랜잭션을 롤백시킵니다.
-                throw new RuntimeException("이미지 파일 저장 중 오류가 발생했습니다."); 
+                throw new RuntimeException("이미지 파일 저장 중 오류가 발생했습니다.");
             }
         }
 
@@ -513,4 +511,6 @@ public class ShopServiceImpl implements ShopService {
                         .build())
                 .collect(Collectors.toList());
     }
+
+    
 }

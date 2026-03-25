@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.shop.admin.dto.ProductApprovalDTO;
 import com.example.shop.dto.request.OrderCreateRequestDTO;
 import com.example.shop.dto.request.ProductCreateRequestDTO;
 import com.example.shop.dto.response.CartResponseDTO;
@@ -62,4 +63,5 @@ public interface ShopService {
     void createReview(Long memberId, Long productId, Integer rating, String comment, MultipartFile reviewImage);
 
     List<com.example.shop.dto.response.ReviewResponseDTO> getProductReviews(Long productId);
+
 }

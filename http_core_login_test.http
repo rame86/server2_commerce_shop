@@ -1,8 +1,8 @@
-POST http://localhost/msa/core/member/login
-Content-Type: application/json
+# GET http://34.64.85.123/msa/shop/admin/approval-list
+# Content-Type: application/json 
+# Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMTIzNiwiZXhwIjoxNzc0NDM0ODM2fQ.nHbRWIGzvrsyqLg2Hw0zDREVVoOioSeOHRTF83COdlBp-w8JH3UJUOfJd588F4Tz
 
-{
-    "email":"suyeong1526@daum.net",
-    "password":"tndud"
-}
+GET http://localhost/msa/shop/admin/approval-list
+Content-Type: application/json 
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3NDQzMTIzNiwiZXhwIjoxNzc0NDM0ODM2fQ.nHbRWIGzvrsyqLg2Hw0zDREVVoOioSeOHRTF83COdlBp-w8JH3UJUOfJd588F4Tz
 
