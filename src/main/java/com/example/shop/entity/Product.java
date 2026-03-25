@@ -80,4 +80,9 @@ public class Product extends BaseTimeEntity {
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
+
+    // 상품 승인 시 (isActive false -> true) 업데이트 로직
+    public void activateProduct() {
+        this.isActive = true;
+    }
 }
