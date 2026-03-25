@@ -34,6 +34,7 @@ import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductVariant;
 import com.example.shop.entity.Wishlist;
 import com.example.shop.entity.enums.ProductCategory;
+import com.example.shop.entity.enums.SellerType;
 import com.example.shop.messaging.producer.ProductMessageProducer;
 import com.example.shop.repository.ApprovalRepository;
 import com.example.shop.repository.CartRepository;
@@ -128,24 +129,64 @@ public class ShopServiceImpl implements ShopService {
             stockQuantity = firstVariant.getStockQuantity();
         }
 
+        // [추가] 1. Product 엔티티 생성 및 저장
+        // role이 ADMIN이나 ARTIST이면 ARTIST, 아니면 USER로 설정
+        SellerType sellerType = "ADMIN".equalsIgnoreCase(role) || "ARTIST".equalsIgnoreCase(role) ? SellerType.ARTIST
+                : SellerType.USER;
+
+        Product product = Product.builder()
+                .sellerId(memberId)
+                .sellerType(sellerType)
+                .category(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
+                .title(requestDto.getGoodsName())
+                .description(requestDto.getDescription())
+                .imageUrl(imageUrl)
+                .basePrice(requestDto.getPrice())
+                .itemCategory(itemCategory)
+                .color(color)
+                .size(size)
+                .isActive(true) // 등록 즉시 활성화하여 조회 가능하도록 설정
+                .build();
+
+        product = productRepository.save(product);
+
+        // [추가] 2. ProductVariant 엔티티 생성 및 저장 (기본 옵션 등록)
+        // 상품 주문을 위해서는 최소 하나 이상의 variant가 필요합니다.
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .color(color)
+                .size(size)
+                .additionalPrice(BigDecimal.ZERO)
+                .stockQuantity(stockQuantity != null ? stockQuantity : 0)
+                .skuCode("SKU-" + product.getProductId() + "-" + System.currentTimeMillis())
+                .build();
+
+        productVariantRepository.save(variant);
+
+        // 3. Approval 엔티티 생성 및 저장 (기존 로직 유지하며 productId 연결)
         Approval approvalRequest = Approval.builder()
                 .requesterId(memberId)
                 .requesterName(requestDto.getRequesterName())
                 .goodsName(requestDto.getGoodsName())
-                .goodsType(ProductCategory.valueOf(requestDto.getGoodsType()))
+                .goodsType(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .description(requestDto.getDescription())
                 .price(requestDto.getPrice())
                 .color(color)
                 .size(size)
                 .itemCategory(itemCategory)
                 .stockQuantity(stockQuantity)
-                .imageUrl(imageUrl) // 생성된 URL 문자열만 저장
+                .imageUrl(imageUrl)
                 .build();
+
+        approvalRequest.linkProduct(product.getProductId()); // 생성된 상품 ID 연결
+        approvalRequest.updateStatus(ApprovalStatus.CONFIRMED, "자동 승인 완료"); // CONFIRMED 상태로 즉시 변경
 
         approvalRequest = approvalRepository.save(approvalRequest);
 
-        // ... (이후 RabbitMQ 전송 로직 동일)
-        return ProductResponseDTO.fromApproval(approvalRequest);
+        log.info(">>>> [상품 등록 완료] Product ID: {}, Approval ID: {}", product.getProductId(),
+                approvalRequest.getApprovalId());
+
+        return ProductResponseDTO.fromEntity(product); // 생성된 Product 정보를 기반으로 DTO 반환
     }
 
     @Override
