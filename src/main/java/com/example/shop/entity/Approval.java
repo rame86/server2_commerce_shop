@@ -97,7 +97,7 @@ public class Approval extends BaseTimeEntity {
         this.stockQuantity = stockQuantity != null ? stockQuantity : 0;
         this.imageUrl = imageUrl;
         this.productId = null;
-        this.status = ApprovalStatus.PENDING;
+        this.status = (status != null) ? status : ApprovalStatus.PENDING; // 2. 전달받은 값 사용
     }
 
     // 승인/반려 상태 변경
