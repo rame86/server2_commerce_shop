@@ -1,7 +1,7 @@
 package com.example.shop.entity;
 
-import org.hibernate.annotations.JdbcType;
-import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.example.shop.entity.enums.ProductCategory;
 
@@ -12,24 +12,28 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Getter
-@NoArgsConstructor
 @Entity
 @Table(name = "product_approvals", schema = "shop")
-public class Approval extends BaseTimeEntity {
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+public class Approval {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "approval_id")
     private Long approvalId;
 
-    // ✅ UUID → Long 으로 변경 (DB: product_id BIGINT)
-    // 수정 요청 시 기존 상품 참조, 신규 등록은 null
     @Column(name = "product_id")
     private Long productId;
 
@@ -43,71 +47,73 @@ public class Approval extends BaseTimeEntity {
     private String goodsName;
 
     @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "goods_type", nullable = false, length = 50)
+    @Column(name = "goods_type", nullable = false)
     private ProductCategory goodsType;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    // ✅ Integer → BigDecimal (DB: NUMERIC(15,2))
     @Column(name = "price", nullable = false, precision = 15, scale = 2)
-    private java.math.BigDecimal price;
+    private BigDecimal price;
 
-    // ✅ 신규 추가 (DB: color VARCHAR(50))
     @Column(name = "color", length = 50)
     private String color;
 
-    // ✅ 신규 추가 (DB: size VARCHAR(50))
     @Column(name = "size", length = 50)
     private String size;
 
-    @Column(name = "item_category", length = 100)
-    private String itemCategory;
-
+    @Builder.Default
     @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity;
+    private Integer stockQuantity = 0;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    // ✅ ApprovalStatus enum 사용 (DB: shop.approval_status)
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "status", nullable = false, length = 20)
-    private ApprovalStatus status;
+    @Column(name = "status", nullable = false)
+    private ApprovalStatus status = ApprovalStatus.PENDING;
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
-    @Builder
-    public Approval(Long requesterId, String requesterName,
-            String goodsName, ProductCategory goodsType, String description,
-            java.math.BigDecimal price, String color, String size, String itemCategory,
-            Integer stockQuantity, String imageUrl) {
-        this.requesterId = requesterId;
-        this.requesterName = requesterName;
-        this.goodsName = goodsName;
-        this.goodsType = goodsType;
-        this.description = description;
-        this.price = price;
-        this.color = color;
-        this.size = size;
-        this.itemCategory = itemCategory;
-        this.stockQuantity = stockQuantity != null ? stockQuantity : 0;
-        this.imageUrl = imageUrl;
-        this.productId = null;
-        this.status = (status != null) ? status : ApprovalStatus.PENDING; // 2. 전달받은 값 사용
+    @Builder.Default
+    @Column(name = "shipping_fee", nullable = false, precision = 15, scale = 2)
+    private BigDecimal shippingFee = BigDecimal.ZERO;
+
+    @Column(name = "item_category", length = 100)
+    private String itemCategory;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // JPA Auditing 대신 PrePersist/PreUpdate 사용 (DB 기본값과 동기화)
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
-    // 승인/반려 상태 변경
-    public void updateStatus(ApprovalStatus status, String rejectionReason) {
-        this.status = status;
-        this.rejectionReason = rejectionReason;
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
-    // 승인 후 생성된 product 연결
+    // ================= 비즈니스 로직 메서드 =================
+    
+    // 상품 ID 연결
     public void linkProduct(Long productId) {
         this.productId = productId;
+    }
+
+    // 승인 상태 및 거절 사유 업데이트
+    public void updateStatus(ApprovalStatus status, String rejectionReason) {
+        this.status = status;
+        if (status == ApprovalStatus.FAILED) {
+            this.rejectionReason = rejectionReason;
+        }
     }
 }
