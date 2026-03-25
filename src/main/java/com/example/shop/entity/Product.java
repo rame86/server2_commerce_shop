@@ -66,7 +66,7 @@ public class Product extends BaseTimeEntity {
     // ✅ base_price 로 컬럼명 변경 (DB 기준)
     @Column(name = "base_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePrice;
-    
+
     @Column(name = "item_category")
     private String itemCategory;
 
@@ -76,8 +76,15 @@ public class Product extends BaseTimeEntity {
     @Column(name = "size", length = 50)
     private String size;
 
-    // ✅ status(String) → is_active(Boolean) 으로 변경 (DB 기준 Soft Delete)
+    // status
     @Column(name = "is_active", nullable = false)
     @Builder.Default
-    private Boolean isActive = true;
+    private Boolean isActive = false;
+
+    // ================= 비즈니스 로직 메서드 =================
+
+    // 관리자 승인/거절 시 상품 활성화 상태 업데이트
+    public void updateActiveStatus(boolean isActive) {
+        this.isActive = isActive;
+    }
 }
