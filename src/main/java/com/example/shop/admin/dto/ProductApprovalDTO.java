@@ -1,5 +1,5 @@
 // \src\main\java\com\example\admin\dto\ProductApprovalDTO.java 
-package com.example.admin.dto;
+package com.example.shop.admin.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

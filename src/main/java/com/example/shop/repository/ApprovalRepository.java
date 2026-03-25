@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.shop.entity.Approval;
-import com.example.shop.entity.ApprovalStatus;
+import com.example.shop.entity.enums.ApprovalStatus;
 
 public interface ApprovalRepository extends JpaRepository<Approval, Long> {
 

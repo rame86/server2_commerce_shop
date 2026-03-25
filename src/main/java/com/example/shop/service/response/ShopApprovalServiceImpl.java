@@ -6,12 +6,12 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.admin.dto.ProductApprovalDTO;
+import com.example.shop.admin.dto.ProductApprovalDTO;
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
 import com.example.shop.entity.Approval;
-import com.example.shop.entity.ApprovalStatus;
 import com.example.shop.entity.Product;
+import com.example.shop.entity.enums.ApprovalStatus;
 import com.example.shop.repository.ApprovalRepository;
 import com.example.shop.repository.ProductRepository;
 

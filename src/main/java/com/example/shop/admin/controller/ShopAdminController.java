@@ -1,4 +1,4 @@
-package com.example.admin.controller;
+package com.example.shop.admin.controller;
 
 import java.util.List;
 
@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.admin.dto.ProductApprovalDTO;
-import com.example.admin.service.ProductApprovalService;
+import com.example.shop.admin.dto.ProductApprovalDTO;
+import com.example.shop.admin.service.ProductApprovalService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
