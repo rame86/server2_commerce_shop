@@ -1,7 +1,5 @@
 package com.example.shop.service;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -10,7 +8,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -104,37 +101,23 @@ public class ShopServiceImpl implements ShopService {
         return dto;
     }
 
-    @Value("${shop.image.upload-path}") // yml의 설정을 읽어옴
-    private String uploadPath;
-
     @Override
     @Transactional
     public ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto,
             MultipartFile imageFile) {
-        log.info("======= 상품 등록 프로세스 시작 =======");
+        log.info("======= 서비스 로직 진입 완료 =======");
 
+        // [수정] 물리적 파일 저장 로직 제거
         String imageUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
-            File folder = new File(uploadPath);
-            if (!folder.exists())
-                folder.mkdirs();
-
-            String saveFileName = UUID.randomUUID().toString() + "_" + imageFile.getOriginalFilename();
-            File destination = new File(folder, saveFileName);
-
-            try {
-                imageFile.transferTo(destination);
-                imageUrl = "/images/shop/" + saveFileName;
-            } catch (IOException e) {
-                log.error("이미지 저장 실패: {}", e.getMessage());
-                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR); // 예외 처리 강화
-            }
+            // 실제 파일을 저장하지 않고, DB 기록을 위해 파일명만 생성하여 유지합니다.
+            imageUrl = "/images/shop/" + UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
         }
 
-        // 변수 추출 및 대문자 변환 (Enum 오류 방지)
-        String goodsTypeUpper = requestDto.getGoodsType().toUpperCase();
+        // ✅ 엔티티 빌더 부분
         String color = requestDto.getColor();
         String size = requestDto.getSize();
+        String itemCategory = requestDto.getItemCategory();
         Integer stockQuantity = 0;
 
         if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
@@ -146,27 +129,29 @@ public class ShopServiceImpl implements ShopService {
             stockQuantity = firstVariant.getStockQuantity();
         }
 
+        // [추가] 1. Product 엔티티 생성 및 저장
+        // role이 ADMIN이나 ARTIST이면 ARTIST, 아니면 USER로 설정
         SellerType sellerType = "ADMIN".equalsIgnoreCase(role) || "ARTIST".equalsIgnoreCase(role) ? SellerType.ARTIST
                 : SellerType.USER;
 
-        // 1. Product 엔티티 생성 (비활성 상태로 저장)
         Product product = Product.builder()
                 .sellerId(memberId)
                 .sellerType(sellerType)
-                .category(ProductCategory.valueOf(goodsTypeUpper)) // 대문자 변환 적용
+                .category(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .title(requestDto.getGoodsName())
                 .description(requestDto.getDescription())
                 .imageUrl(imageUrl)
                 .basePrice(requestDto.getPrice())
-                .itemCategory(requestDto.getItemCategory())
+                .itemCategory(itemCategory)
                 .color(color)
                 .size(size)
-                .isActive(false) // [변경] 등록 시 바로 노출되지 않도록 false 설정
+                .isActive(true) // 등록 즉시 활성화하여 조회 가능하도록 설정
                 .build();
 
         product = productRepository.save(product);
 
-        // 2. ProductVariant 생성
+        // [추가] 2. ProductVariant 엔티티 생성 및 저장 (기본 옵션 등록)
+        // 상품 주문을 위해서는 최소 하나 이상의 variant가 필요합니다.
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .color(color)
@@ -178,32 +163,30 @@ public class ShopServiceImpl implements ShopService {
 
         productVariantRepository.save(variant);
 
-        // 3. Approval 엔티티 생성
-        // [중요] 빌더에서 .status()는 호출하지 않습니다. 엔티티 생성자에서 자동으로 PENDING을 넣습니다.
+        // 3. Approval 엔티티 생성 및 저장 (기존 로직 유지하며 productId 연결)
         Approval approvalRequest = Approval.builder()
                 .requesterId(memberId)
-                .requesterName(requestDto.getRequesterName() != null ? requestDto.getRequesterName() : "Unknown") // Null
-                                                                                                                  // 방어
+                .requesterName(requestDto.getRequesterName())
                 .goodsName(requestDto.getGoodsName())
-                .goodsType(ProductCategory.valueOf(goodsTypeUpper))
+                .goodsType(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .description(requestDto.getDescription())
                 .price(requestDto.getPrice())
                 .color(color)
                 .size(size)
-                .itemCategory(requestDto.getItemCategory())
+                .itemCategory(itemCategory)
                 .stockQuantity(stockQuantity)
                 .imageUrl(imageUrl)
                 .build();
 
-        approvalRequest.linkProduct(product.getProductId());
-        // [삭제] 기존의 CONFIRMED 강제 업데이트 로직은 삭제하여 PENDING 유지
+        approvalRequest.linkProduct(product.getProductId()); // 생성된 상품 ID 연결
+        approvalRequest.updateStatus(ApprovalStatus.CONFIRMED, "자동 승인 완료"); // CONFIRMED 상태로 즉시 변경
 
         approvalRequest = approvalRepository.save(approvalRequest);
 
-        log.info(">>>> [상품 등록 대기] Product ID: {}, Approval ID: {}, 상태: PENDING",
-                product.getProductId(), approvalRequest.getApprovalId());
+        log.info(">>>> [상품 등록 완료] Product ID: {}, Approval ID: {}", product.getProductId(),
+                approvalRequest.getApprovalId());
 
-        return ProductResponseDTO.fromEntity(product);
+        return ProductResponseDTO.fromEntity(product); // 생성된 Product 정보를 기반으로 DTO 반환
     }
 
     @Override
