@@ -1,5 +1,7 @@
 package com.example.shop.service;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -101,17 +104,34 @@ public class ShopServiceImpl implements ShopService {
         return dto;
     }
 
+    @Value("${shop.image.upload-path}") // yml의 설정을 읽어옴
+    private String uploadPath;
+
     @Override
     @Transactional
     public ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto,
             MultipartFile imageFile) {
         log.info("======= 서비스 로직 진입 완료 =======");
 
-        // [수정] 물리적 파일 저장 로직 제거
         String imageUrl = null;
+
         if (imageFile != null && !imageFile.isEmpty()) {
-            // 실제 파일을 저장하지 않고, DB 기록을 위해 파일명만 생성하여 유지합니다.
-            imageUrl = "/images/shop/" + UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
+            File folder = new File(uploadPath);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+
+            String saveFileName = UUID.randomUUID().toString() + "_" + imageFile.getOriginalFilename();
+            File destination = new File(folder, saveFileName);
+
+            try {
+                imageFile.transferTo(destination);
+                // DB에는 웹에서 접근 가능한 URL 경로를 저장
+                imageUrl = "/images/shop/" + saveFileName;
+            } catch (IOException e) {
+                log.error("이미지 저장 실패: {}", e.getMessage());
+                throw new RuntimeException("이미지 저장 중 오류가 발생했습니다.", e);
+            }
         }
 
         // ✅ 엔티티 빌더 부분
@@ -137,7 +157,7 @@ public class ShopServiceImpl implements ShopService {
         Product product = Product.builder()
                 .sellerId(memberId)
                 .sellerType(sellerType)
-                .category(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
+                .category(ProductCategory.valueOf(requestDto.getGoodsType()))
                 .title(requestDto.getGoodsName())
                 .description(requestDto.getDescription())
                 .imageUrl(imageUrl)
