@@ -109,7 +109,7 @@ public class Approval {
     }
 
     // ================= 비즈니스 로직 메서드 =================
-    
+
     // 상품 ID 연결
     public void linkProduct(Long productId) {
         this.productId = productId;
@@ -118,8 +118,7 @@ public class Approval {
     // 승인 상태 및 거절 사유 업데이트
     public void updateStatus(ApprovalStatus status, String rejectionReason) {
         this.status = status;
-        if (status == ApprovalStatus.FAILED) {
-            this.rejectionReason = rejectionReason;
-        }
+        this.rejectionReason = rejectionReason;
+
     }
 }
