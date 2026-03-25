@@ -74,36 +74,31 @@ jobs:
           script: |
             WORK_DIR="/home/oksm1003/shop"
             mkdir -p $WORK_DIR
-            
-            # 볼륨 마운트용 호스트 디렉토리 사전 생성 (권한 이슈 방지)
             mkdir -p /home/oksm1003/images/shop
-            
             cd $WORK_DIR
-            
-            # Git 동기화
-            git remote set-url origin https://github.com/rame86/server2_commerce_shop.git || true
-            git fetch origin
-            git reset --hard origin/master
-            git clean -fd
-            git pull origin master
 
-            # 네트워크 확인 및 생성
-            docker network inspect msa-network >/dev/null 2>&1 || docker network create msa-network
+            # (중략) Git Pull 로직
 
-            # .env 파일 동적 생성
+            # [.env 파일 동적 생성] - 이름을 properties 파일과 일치시키세요!
             echo "SPRING_PROFILES_ACTIVE=prod" > .env
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-            echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            
+            # DB 설정 (DB_USER -> POSTGRES_USER로 변경)
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            
+            # RabbitMQ 및 기타 인프라 설정 (누락된 GCP_SERVER_1 추가)
+            echo "GCP_SERVER_1=${{ secrets.GCP_SERVER_1 }}" >> .env
+            echo "RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}" >> .env
             echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
             echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
+            
             echo "TZ=Asia/Seoul" >> .env
             
-            # 컨테이너 실행 및 정리
+            # 컨테이너 실행
             docker compose pull
             docker compose up -d --force-recreate
-            docker image prune -f
-
+            
       # 9. 방화벽 규칙 삭제
       - name: Close Firewall
         if: always()

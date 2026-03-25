@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.shop.admin.dto.ProductApprovalDTO;
 import com.example.shop.common.exception.BusinessException;
 import com.example.shop.common.exception.ErrorCode;
 import com.example.shop.config.RabbitMQConfig;
@@ -176,7 +175,7 @@ public class ShopServiceImpl implements ShopService {
                 .itemCategory(itemCategory)
                 .color(color)
                 .size(size)
-                .isActive(true) // 등록 즉시 활성화하여 조회 가능하도록 설정
+                .isActive(false)
                 .build();
 
         product = productRepository.save(product);
@@ -210,7 +209,7 @@ public class ShopServiceImpl implements ShopService {
                 .build();
 
         approvalRequest.linkProduct(product.getProductId()); // 생성된 상품 ID 연결
-        approvalRequest.updateStatus(ApprovalStatus.CONFIRMED, "자동 승인 완료"); // CONFIRMED 상태로 즉시 변경
+        approvalRequest.updateStatus(ApprovalStatus.PENDING, "승인 대기중");
 
         approvalRequest = approvalRepository.save(approvalRequest);
 
