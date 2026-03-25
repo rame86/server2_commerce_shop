@@ -48,7 +48,7 @@ public class ProductController {
     }
 
     @GetMapping("/unofficial")
-    public List<ProductResponseDTO> fanmade() {
+    public List<ProductResponseDTO> unofficial() {
         return shopService.getProducts();
     }
 
@@ -90,7 +90,7 @@ public class ProductController {
     }
 
     @PostMapping(value = "/unofficial", consumes = { "multipart/form-data", "application/json" })
-    public ProductResponseDTO createFanmade(
+    public ProductResponseDTO createunofficial(
             @RequestHeader(value = "X-User-Id", defaultValue = "2") Long memberId,
             @ModelAttribute ProductCreateRequestDTO requestDto,
             @RequestPart(name = "imageFile", required = false) MultipartFile imageFile) {
@@ -104,7 +104,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/unofficial/{productId}")
-    public void deleteFanmade(@PathVariable String productId) {
+    public void deleteunofficial(@PathVariable String productId) {
         shopService.deleteProduct(1L, productId);
     }
 
