@@ -89,7 +89,7 @@ public class ShopServiceImpl implements ShopService {
         return toProductResponseDTO(product);
     }
 
-    // Product 엔티티를 DTO로 변환하면서 리뷰 정보 추가
+    // Product 엔티티를 DTO로 변환하면서 리븷 정보 및 재고 수량 코집
     private ProductResponseDTO toProductResponseDTO(Product product) {
         ProductResponseDTO dto = ProductResponseDTO.fromEntity(product);
         List<com.example.shop.entity.Review> reviews = reviewRepository
@@ -106,6 +106,12 @@ public class ShopServiceImpl implements ShopService {
             dto.setAverageRating(0.0);
             dto.setReviewCount(0L);
         }
+
+        // variant 안의 stock_quantity 합산
+        List<ProductVariant> variants = productVariantRepository.findByProduct_ProductId(product.getProductId());
+        int totalStock = variants.stream().mapToInt(ProductVariant::getStockQuantity).sum();
+        dto.setStockQuantity(totalStock);
+
         return dto;
     }
 
@@ -150,10 +156,12 @@ public class ShopServiceImpl implements ShopService {
         String itemCategory = requestDto.getItemCategory();
         Integer stockQuantity = requestDto.getStockQuantity() != null ? requestDto.getStockQuantity() : 0;
 
-       if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
+        if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
             ProductCreateRequestDTO.VariantDTO firstVariant = requestDto.getVariants().get(0);
-            if (color == null) color = firstVariant.getColor();
-            if (size == null) size = firstVariant.getSize();
+            if (color == null)
+                color = firstVariant.getColor();
+            if (size == null)
+                size = firstVariant.getSize();
         }
 
         // [추가] 1. Product 엔티티 생성 및 저장
@@ -252,11 +260,11 @@ public class ShopServiceImpl implements ShopService {
                 .memberId(memberId)
                 .shippingAddress(requestDto.getShippingAddress())
                 .shippingFee(shippingFee)
-                .trackingNumber(generatedTrackingNumber) 
+                .trackingNumber(generatedTrackingNumber)
                 .status(OrderStatus.PENDING)
                 .build();
 
-        BigDecimal feePercentage = new BigDecimal("0.10"); 
+        BigDecimal feePercentage = new BigDecimal("0.10");
         String eventTitle = "";
         Long sellerId = null;
 
@@ -278,10 +286,18 @@ public class ShopServiceImpl implements ShopService {
                 feePercentage = new BigDecimal("0.15");
             }
 
+            // 재고 확인
+            if (variant.getStockQuantity() < itemDto.getQuantity()) {
+                throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND); // 재고 부족
+            }
+
             // 단가 및 소계 계산
             BigDecimal unitPrice = product.getBasePrice().add(variant.getAdditionalPrice());
             BigDecimal itemSubtotal = unitPrice.multiply(new BigDecimal(itemDto.getQuantity()));
             itemsTotalAmount = itemsTotalAmount.add(itemSubtotal);
+
+            // 재고 차감 (JPQL update 대신 엔티티 직접 수정)
+            variant.decreaseStock(itemDto.getQuantity());
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
