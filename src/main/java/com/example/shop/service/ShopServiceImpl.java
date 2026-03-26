@@ -266,6 +266,10 @@ public class ShopServiceImpl implements ShopService {
 
         // 상품 합계 금액 계산용 (배송비 제외)
         BigDecimal itemsTotalAmount = BigDecimal.ZERO;
+        
+        // 결제 시간 포맷팅 (yyyyMMddHHmmss) 및 다건 결제 접두어 속성 설정
+        String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String eventTitlePrefix = requestDto.getItems().size() > 1 ? "묶음결제" : "";
 
         // 4. 주문 정보 1차 저장 (ID 발급 위함)
         Order savedOrder = orderRepository.save(order);
@@ -326,7 +330,7 @@ public class ShopServiceImpl implements ShopService {
             // 수수료 정수 변환 (10% -> 10)
             paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));
 
-            paymentEvent.setEventTitle(product.getTitle());
+            paymentEvent.setEventTitle(eventTitlePrefix + timestamp + "-" + product.getTitle());
             paymentEvent.setReplyRoutingKey(RabbitMQConfig.SHOP_PAY_REPLY_ROUTING_KEY);
 
             // RabbitMQ 메시지 전송 (각 상품 별)
