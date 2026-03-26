@@ -31,6 +31,7 @@ public class ProductResponseDTO {
     private Long reviewCount;
     private BigDecimal basePrice;
     private Boolean isActive;
+    private Integer stockQuantity;   // variant 재고 합산
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
