@@ -21,6 +21,7 @@ public class ProductResponseDTO {
 
     private Long productId;
     private Long sellerId;
+    private Long artistId;
     private String sellerType;
     private String category;
     private String title;
@@ -30,6 +31,7 @@ public class ProductResponseDTO {
     private Long reviewCount;
     private BigDecimal basePrice;
     private Boolean isActive;
+    private Integer stockQuantity;   // variant 재고 합산
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -50,6 +52,7 @@ public class ProductResponseDTO {
 
         return ProductResponseDTO.builder()
                 .productId(product.getProductId())
+                .artistId(product.getArtistId())
                 .sellerId(product.getSellerId())
                 .sellerType(product.getSellerType() != null ? product.getSellerType().name() : null)
                 .category(product.getCategory() != null ? product.getCategory().name() : null)
@@ -70,7 +73,7 @@ public class ProductResponseDTO {
         return ProductResponseDTO.builder()
                 .productId(null)
                 .sellerId(approval.getRequesterId())
-                // .name()을 사용하여 Enum -> String 변환 오류 해결
+                .artistId(approval.getArtistId())
                 .sellerType(approval.getGoodsType() != null ? approval.getGoodsType().name() : null)
                 .category(approval.getGoodsType() != null ? approval.getGoodsType().name() : null)
                 .title(approval.getGoodsName())

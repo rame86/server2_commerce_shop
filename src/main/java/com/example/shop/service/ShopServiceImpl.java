@@ -3,6 +3,7 @@ package com.example.shop.service;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.shop.common.exception.BusinessException;
@@ -27,7 +29,6 @@ import com.example.shop.dto.response.OrderResponseDTO;
 import com.example.shop.dto.response.ProductResponseDTO;
 import com.example.shop.dto.response.WishlistResponseDTO;
 import com.example.shop.entity.Approval;
-import com.example.shop.entity.ApprovalStatus;
 import com.example.shop.entity.Cart;
 import com.example.shop.entity.CartItem;
 import com.example.shop.entity.Order;
@@ -36,6 +37,7 @@ import com.example.shop.entity.OrderStatus;
 import com.example.shop.entity.Product;
 import com.example.shop.entity.ProductVariant;
 import com.example.shop.entity.Wishlist;
+import com.example.shop.entity.enums.ApprovalStatus;
 import com.example.shop.entity.enums.ProductCategory;
 import com.example.shop.entity.enums.SellerType;
 import com.example.shop.messaging.producer.ProductMessageProducer;
@@ -66,6 +68,9 @@ public class ShopServiceImpl implements ShopService {
     private final RabbitTemplate rabbitTemplate;
     private final ProductMessageProducer productMessageProducer;
 
+    @Value("${shop.image.upload-path}")
+    private String uploadPath;
+
     // ======================== 상품 관련 ========================
     @Override
     @Transactional(readOnly = true)
@@ -84,7 +89,7 @@ public class ShopServiceImpl implements ShopService {
         return toProductResponseDTO(product);
     }
 
-    // Product 엔티티를 DTO로 변환하면서 리뷰 정보 추가
+    // Product 엔티티를 DTO로 변환하면서 리븷 정보 및 재고 수량 코집
     private ProductResponseDTO toProductResponseDTO(Product product) {
         ProductResponseDTO dto = ProductResponseDTO.fromEntity(product);
         List<com.example.shop.entity.Review> reviews = reviewRepository
@@ -101,41 +106,55 @@ public class ShopServiceImpl implements ShopService {
             dto.setAverageRating(0.0);
             dto.setReviewCount(0L);
         }
+
+        // variant 안의 stock_quantity 합산
+        List<ProductVariant> variants = productVariantRepository.findByProduct_ProductId(product.getProductId());
+        int totalStock = variants.stream().mapToInt(ProductVariant::getStockQuantity).sum();
+        dto.setStockQuantity(totalStock);
+
         return dto;
     }
-
-    @Value("${shop.image.upload-path}") // yml의 설정을 읽어옴
-    private String uploadPath;
 
     @Override
     @Transactional
     public ProductResponseDTO createProduct(Long memberId, String role, ProductCreateRequestDTO requestDto,
             MultipartFile imageFile) {
-        log.info("======= 상품 등록 프로세스 시작 =======");
+        log.info("======= 서비스 로직 진입 완료 =======");
 
         String imageUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
-            File folder = new File(uploadPath);
-            if (!folder.exists())
-                folder.mkdirs();
+            // 1. [보안] 원본 파일명에서 경로 조작 문자(../ 등) 제거 및 순수 파일명 추출
+            String originalFilename = StringUtils.cleanPath(imageFile.getOriginalFilename());
+            String safeFilename = Paths.get(originalFilename).getFileName().toString();
 
-            String saveFileName = UUID.randomUUID().toString() + "_" + imageFile.getOriginalFilename();
-            File destination = new File(folder, saveFileName);
+            // 2. 고유 파일명 생성
+            String uniqueFileName = UUID.randomUUID() + "_" + safeFilename;
+            imageUrl = "/images/shop/" + uniqueFileName;
 
+            // 3. 물리적 파일 저장 로직
             try {
-                imageFile.transferTo(destination);
-                imageUrl = "/images/shop/" + saveFileName;
+                File uploadDir = new File(uploadPath);
+                // 디렉토리가 존재하지 않으면 생성 (부모 디렉토리 포함)
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdirs();
+                }
+
+                // 지정된 경로에 실제 파일 저장
+                File saveFile = new File(uploadPath, uniqueFileName);
+                imageFile.transferTo(saveFile);
+                log.info(">>>> [파일 저장 완료] 경로: {}", saveFile.getAbsolutePath());
             } catch (IOException e) {
-                log.error("이미지 저장 실패: {}", e.getMessage());
-                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR); // 예외 처리 강화
+                log.error(">>>> [파일 저장 실패] 파일명: {}", uniqueFileName, e);
+                // 파일 저장이 필수라면 여기서 예외를 던져 트랜잭션을 롤백시킵니다.
+                throw new RuntimeException("이미지 파일 저장 중 오류가 발생했습니다.");
             }
         }
 
-        // 변수 추출 및 대문자 변환 (Enum 오류 방지)
-        String goodsTypeUpper = requestDto.getGoodsType().toUpperCase();
+        // 엔티티 빌더 부분
         String color = requestDto.getColor();
         String size = requestDto.getSize();
-        Integer stockQuantity = 0;
+        String itemCategory = requestDto.getItemCategory();
+        Integer stockQuantity = requestDto.getStockQuantity() != null ? requestDto.getStockQuantity() : 0;
 
         if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
             ProductCreateRequestDTO.VariantDTO firstVariant = requestDto.getVariants().get(0);
@@ -143,67 +162,68 @@ public class ShopServiceImpl implements ShopService {
                 color = firstVariant.getColor();
             if (size == null)
                 size = firstVariant.getSize();
-            stockQuantity = firstVariant.getStockQuantity();
         }
 
+        // [추가] 1. Product 엔티티 생성 및 저장
+        // role이 ADMIN이나 ARTIST이면 ARTIST, 아니면 USER로 설정
         SellerType sellerType = "ADMIN".equalsIgnoreCase(role) || "ARTIST".equalsIgnoreCase(role) ? SellerType.ARTIST
                 : SellerType.USER;
 
-        // 1. Product 엔티티 생성 (비활성 상태로 저장)
         Product product = Product.builder()
                 .sellerId(memberId)
+                .artistId(requestDto.getArtistId())
                 .sellerType(sellerType)
-                .category(ProductCategory.valueOf(goodsTypeUpper)) // 대문자 변환 적용
+                .category(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .title(requestDto.getGoodsName())
                 .description(requestDto.getDescription())
                 .imageUrl(imageUrl)
                 .basePrice(requestDto.getPrice())
-                .itemCategory(requestDto.getItemCategory())
+                .itemCategory(itemCategory)
                 .color(color)
                 .size(size)
-                .isActive(false) // [변경] 등록 시 바로 노출되지 않도록 false 설정
+                .isActive(false)
                 .build();
 
         product = productRepository.save(product);
 
-        // 2. ProductVariant 생성
+        // [추가] 2. ProductVariant 엔티티 생성 및 저장 (기본 옵션 등록)
+        // 상품 주문을 위해서는 최소 하나 이상의 variant가 필요합니다.
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .color(color)
                 .size(size)
                 .additionalPrice(BigDecimal.ZERO)
-                .stockQuantity(stockQuantity != null ? stockQuantity : 0)
+                .stockQuantity(stockQuantity)
                 .skuCode("SKU-" + product.getProductId() + "-" + System.currentTimeMillis())
                 .build();
 
         productVariantRepository.save(variant);
 
-        // 3. Approval 엔티티 생성
-        // [중요] 빌더에서 .status()는 호출하지 않습니다. 엔티티 생성자에서 자동으로 PENDING을 넣습니다.
+        // 3. Approval 엔티티 생성 및 저장 (기존 로직 유지하며 productId 연결)
         Approval approvalRequest = Approval.builder()
                 .requesterId(memberId)
-                .requesterName(requestDto.getRequesterName() != null ? requestDto.getRequesterName() : "Unknown") // Null
-                                                                                                                  // 방어
+                .requesterName(requestDto.getRequesterName())
+                .artistId(requestDto.getArtistId())
                 .goodsName(requestDto.getGoodsName())
-                .goodsType(ProductCategory.valueOf(goodsTypeUpper))
+                .goodsType(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .description(requestDto.getDescription())
                 .price(requestDto.getPrice())
                 .color(color)
                 .size(size)
-                .itemCategory(requestDto.getItemCategory())
+                .itemCategory(itemCategory)
                 .stockQuantity(stockQuantity)
                 .imageUrl(imageUrl)
                 .build();
 
-        approvalRequest.linkProduct(product.getProductId());
-        // [삭제] 기존의 CONFIRMED 강제 업데이트 로직은 삭제하여 PENDING 유지
+        approvalRequest.linkProduct(product.getProductId()); // 생성된 상품 ID 연결
+        approvalRequest.updateStatus(ApprovalStatus.PENDING, "승인 대기중");
 
         approvalRequest = approvalRepository.save(approvalRequest);
 
-        log.info(">>>> [상품 등록 대기] Product ID: {}, Approval ID: {}, 상태: PENDING",
-                product.getProductId(), approvalRequest.getApprovalId());
+        log.info(">>>> [상품 등록 완료] Product ID: {}, Approval ID: {}", product.getProductId(),
+                approvalRequest.getApprovalId());
 
-        return ProductResponseDTO.fromEntity(product);
+        return ProductResponseDTO.fromEntity(product); // 생성된 Product 정보를 기반으로 DTO 반환
     }
 
     @Override
@@ -227,18 +247,31 @@ public class ShopServiceImpl implements ShopService {
     @Transactional
     public OrderResponseDTO createOrder(Long memberId, OrderCreateRequestDTO requestDto) {
 
-        // 1. 주문 기본 엔티티 생성 (DB: orders 테이블)
+        // 1. 운송장 번호 자동 생성 (TRK + 타임스탬프 + UUID 일부 조합)
+        String generatedTrackingNumber = "TRK" + System.currentTimeMillis()
+                + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
+
+        // 2. 배송비 설정 (DTO에서 넘어온 값이 있으면 사용, 없으면 기본값 3000원 설정)
+        BigDecimal shippingFee = requestDto.getShippingFee() != null ? requestDto.getShippingFee()
+                : new BigDecimal("3000");
+
+        // 3. 주문 기본 엔티티 생성 (배송비와 운송장 번호 필드 추가)
         Order order = Order.builder()
                 .memberId(memberId)
                 .shippingAddress(requestDto.getShippingAddress())
+                .shippingFee(shippingFee)
+                .trackingNumber(generatedTrackingNumber)
                 .status(OrderStatus.PENDING)
                 .build();
 
-        BigDecimal feePercentage = new BigDecimal("0.10"); // 기본 10% (OFFICIAL)
+        BigDecimal feePercentage = new BigDecimal("0.10");
         String eventTitle = "";
-        Long sellerId = null; // ✅ artistId -> sellerId로 변경
+        Long sellerId = null;
 
-        // 2. 주문 상품 상세 처리 (DB: order_items 테이블)
+        // 상품 합계 금액 계산용 (배송비 제외)
+        BigDecimal itemsTotalAmount = BigDecimal.ZERO;
+
+        // 4. 주문 상품 상세 처리
         for (int i = 0; i < requestDto.getItems().size(); i++) {
             OrderItemDTO itemDto = requestDto.getItems().get(i);
 
@@ -247,14 +280,24 @@ public class ShopServiceImpl implements ShopService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
             Product product = variant.getProduct();
 
-            // 수수료 판별: OFFICIAL 외(UNOFFICIAL, SECONDHAND) 상품이 하나라도 있으면 15% 적용
+            // 수수료 판별
             String category = product.getCategory().name();
             if ("UNOFFICIAL".equals(category) || "SECONDHAND".equals(category)) {
                 feePercentage = new BigDecimal("0.15");
             }
 
-            // 단가 계산 (기본가 + 옵션가)
+            // 재고 확인
+            if (variant.getStockQuantity() < itemDto.getQuantity()) {
+                throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND); // 재고 부족
+            }
+
+            // 단가 및 소계 계산
             BigDecimal unitPrice = product.getBasePrice().add(variant.getAdditionalPrice());
+            BigDecimal itemSubtotal = unitPrice.multiply(new BigDecimal(itemDto.getQuantity()));
+            itemsTotalAmount = itemsTotalAmount.add(itemSubtotal);
+
+            // 재고 차감 (JPQL update 대신 엔티티 직접 수정)
+            variant.decreaseStock(itemDto.getQuantity());
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
@@ -268,37 +311,39 @@ public class ShopServiceImpl implements ShopService {
             if (i == 0) {
                 eventTitle = product.getTitle()
                         + (requestDto.getItems().size() > 1 ? " 외 " + (requestDto.getItems().size() - 1) + "건" : "");
-                sellerId = product.getSellerId(); // ✅ getArtistId() -> getSellerId()로 수정
+                sellerId = product.getSellerId();
             }
         }
 
-        // 3. 주문 정보 저장
+        // 5. 최종 결제 금액 설정 (상품 합계 + 배송비)
+        // Order 엔티티 내에 totalAmount를 계산하는 로직이 없다면 아래와 같이 직접 세팅해야 합니다.
+        order.setTotalAmount(itemsTotalAmount.add(shippingFee));
+
+        // 6. 주문 정보 저장
         Order savedOrder = orderRepository.save(order);
 
-        // 4. 결제 서비스로 보낼 이벤트 생성
+        // 7. 결제 서비스로 보낼 이벤트 생성
         PaymentEventDTO paymentEvent = new PaymentEventDTO();
         paymentEvent.setType("PAYMENT");
         paymentEvent.setOrderId(savedOrder.getOrderId().toString());
         paymentEvent.setMemberId(memberId);
-        paymentEvent.setArtistId(sellerId); // ✅ DTO의 필드명도 sellerId로 맞추는 것을 권장합니다.
-        paymentEvent.setAmount(savedOrder.getTotalAmount());
+        paymentEvent.setArtistId(sellerId);
+        paymentEvent.setAmount(savedOrder.getTotalAmount()); // 배송비가 포함된 총액 전송
 
-        // 🌟 [중요] SettlementService(결제 서버)는 originalPrice * quantity 로 정산액을 계산함.
-        // 여러 품목이 섞인 SHOP 주문의 경우, 전체 합계(totalAmount)를 originalPrice로 보내고
-        // quantity를 1로 고정하여 정산액이 꼬이지 않게 함 (예매 서비스 패턴 참고).
         paymentEvent.setOriginalPrice(savedOrder.getTotalAmount());
         paymentEvent.setQuantity(1);
 
-        // 🌟 [수정] 수수료는 0.10이 아니라 10(%) 처럼 정수로 보내야 결제 서버에서 정확히 계산됨 (divide(100) 대응)
+        // 수수료 정수 변환 (10% -> 10)
         paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));
 
         paymentEvent.setEventTitle(eventTitle);
         paymentEvent.setReplyRoutingKey(RabbitMQConfig.SHOP_PAY_REPLY_ROUTING_KEY);
 
-        // 5. RabbitMQ 메시지 전송
+        // 8. RabbitMQ 메시지 전송
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, "pay.request", paymentEvent);
 
-        log.info(">>>> [주문 생성 완료] ID: {}, 판매자: {}, 적용 수수료: {}", savedOrder.getOrderId(), sellerId, feePercentage);
+        log.info(">>>> [주문 생성 완료] ID: {}, 운송장: {}, 배송비: {}, 총액: {}",
+                savedOrder.getOrderId(), generatedTrackingNumber, shippingFee, savedOrder.getTotalAmount());
 
         return OrderResponseDTO.fromEntity(savedOrder);
     }
@@ -497,4 +542,5 @@ public class ShopServiceImpl implements ShopService {
                         .build())
                 .collect(Collectors.toList());
     }
+
 }

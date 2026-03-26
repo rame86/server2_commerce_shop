@@ -19,6 +19,8 @@ public class OrderResponseDTO {
     private String orderId;
     private Long memberId;
     private String shippingAddress;
+    private BigDecimal shippingFee;
+    private String trackingNumber;
     @JsonProperty("totalAmount")
     private BigDecimal totalAmount;
     private String status;
@@ -51,10 +53,10 @@ public class OrderResponseDTO {
 
             return OrderItemDto.builder()
                     .orderItemId(item.getOrderItemId().toString())
-                    .variantId(item.getVariant().getVariantId().toString()) // ✅ variant FK 기준
+                    .variantId(item.getVariant().getVariantId().toString())
                     .color(item.getVariant().getColor())
                     .size(item.getVariant().getSize())
-                    .title(item.getVariant().getProduct().getTitle()) // ✅ variant→product 조인
+                    .title(item.getVariant().getProduct().getTitle())
                     .imageUrl(imageUrl)
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
@@ -68,6 +70,8 @@ public class OrderResponseDTO {
                 .orderId(order.getOrderId().toString())
                 .memberId(order.getMemberId())
                 .shippingAddress(order.getShippingAddress())
+                .shippingFee(order.getShippingFee())     
+                .trackingNumber(order.getTrackingNumber())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus().name())
                 .orderItems(order.getOrderItems().stream()

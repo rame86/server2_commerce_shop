@@ -5,12 +5,10 @@ services:
     container_name: shop-service
     
     ports:
-      - "8081:8081"
-      
+      - "8081:8081"      
     # 중요: 개별 변수 매핑 대신 .env 파일을 통한 환경 변수 통합 주입
     env_file:
-      - .env
-      
+      - .env      
     environment:
       # 프로필을 prod로 강제 지정 및 타임존 설정
       - SPRING_PROFILES_ACTIVE=prod
@@ -18,11 +16,9 @@ services:
       
     volumes:
       # 호스트 경로 : 컨테이너 내부 경로 매핑 (이미지 데이터 영속성 유지)
-      - /home/oksm1003/images/shop:/app/resources/static/images/shop
-      
+      - /home/oksm1003/images/shop:/app/resources/static/images/shop      
     networks:
-      - msa-network
-      
+      - msa-network      
     # 컨테이너 비정상 종료 시 자동 재시작
     restart: always
 
