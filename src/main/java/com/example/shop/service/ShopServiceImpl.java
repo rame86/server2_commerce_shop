@@ -264,16 +264,13 @@ public class ShopServiceImpl implements ShopService {
                 .status(OrderStatus.PENDING)
                 .build();
 
-        BigDecimal feePercentage = new BigDecimal("0.10");
-        String eventTitle = "";
-        Long artistId = null;
-        BigDecimal firstItemUnitPrice = BigDecimal.ZERO;
-        int totalQuantity = 0;
-
         // 상품 합계 금액 계산용 (배송비 제외)
         BigDecimal itemsTotalAmount = BigDecimal.ZERO;
 
-        // 4. 주문 상품 상세 처리
+        // 4. 주문 정보 1차 저장 (ID 발급 위함)
+        Order savedOrder = orderRepository.save(order);
+
+        // 5. 주문 상품 상세 처리 및 개별 MQ 이벤트 전송
         for (int i = 0; i < requestDto.getItems().size(); i++) {
             OrderItemDTO itemDto = requestDto.getItems().get(i);
 
@@ -283,6 +280,7 @@ public class ShopServiceImpl implements ShopService {
             Product product = variant.getProduct();
 
             // 수수료 판별
+            BigDecimal feePercentage = new BigDecimal("0.10");
             String category = product.getCategory().name();
             if ("UNOFFICIAL".equals(category) || "SECONDHAND".equals(category)) {
                 feePercentage = new BigDecimal("0.15");
@@ -302,53 +300,44 @@ public class ShopServiceImpl implements ShopService {
             variant.decreaseStock(itemDto.getQuantity());
 
             OrderItem orderItem = OrderItem.builder()
-                    .order(order)
+                    .order(savedOrder)
                     .variant(variant)
                     .quantity(itemDto.getQuantity())
                     .unitPrice(unitPrice)
                     .build();
 
-            order.addOrderItem(orderItem);
+            savedOrder.addOrderItem(orderItem);
 
-            totalQuantity += itemDto.getQuantity();
+            // 결제 서비스로 보낼 이벤트 개별 생성
+            PaymentEventDTO paymentEvent = new PaymentEventDTO();
+            paymentEvent.setType("PAYMENT");
+            paymentEvent.setOrderId(savedOrder.getOrderId().toString());
+            paymentEvent.setMemberId(memberId);
+            paymentEvent.setArtistId(product.getArtistId());
+            
+            // 첫 번째 상품에만 전체 배송비 포함, 나머지는 배송비 0
+            BigDecimal appliedShippingFee = (i == 0) ? shippingFee : BigDecimal.ZERO;
+            paymentEvent.setShippingFee(appliedShippingFee);
+            paymentEvent.setAmount(itemSubtotal.add(appliedShippingFee));
 
-            if (i == 0) {
-                eventTitle = product.getTitle()
-                        + (requestDto.getItems().size() > 1 ? " 외 " + (requestDto.getItems().size() - 1) + "건" : "");
-                artistId = product.getArtistId();
-                firstItemUnitPrice = unitPrice;
-            }
+            paymentEvent.setOriginalPrice(unitPrice);
+            paymentEvent.setQuantity(itemDto.getQuantity());
+
+            // 수수료 정수 변환 (10% -> 10)
+            paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));
+
+            paymentEvent.setEventTitle(product.getTitle());
+            paymentEvent.setReplyRoutingKey(RabbitMQConfig.SHOP_PAY_REPLY_ROUTING_KEY);
+
+            // RabbitMQ 메시지 전송 (각 상품 별)
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, "pay.request", paymentEvent);
         }
 
-        // 5. 최종 결제 금액 설정 (상품 합계 + 배송비)
-        // Order 엔티티 내에 totalAmount를 계산하는 로직이 없다면 아래와 같이 직접 세팅해야 합니다.
-        order.setTotalAmount(itemsTotalAmount.add(shippingFee));
+        // 6. 최종 결제 금액 업데이트 (상품 합계 + 배송비)
+        savedOrder.setTotalAmount(itemsTotalAmount.add(shippingFee));
+        orderRepository.save(savedOrder);
 
-        // 6. 주문 정보 저장
-        Order savedOrder = orderRepository.save(order);
-
-        // 7. 결제 서비스로 보낼 이벤트 생성
-        PaymentEventDTO paymentEvent = new PaymentEventDTO();
-        paymentEvent.setType("PAYMENT");
-        paymentEvent.setOrderId(savedOrder.getOrderId().toString());
-        paymentEvent.setMemberId(memberId);
-        paymentEvent.setArtistId(artistId);
-        paymentEvent.setAmount(savedOrder.getTotalAmount()); // 배송비가 포함된 총액 전송
-
-        paymentEvent.setOriginalPrice(firstItemUnitPrice);
-        paymentEvent.setQuantity(totalQuantity);
-        paymentEvent.setShippingFee(shippingFee);
-
-        // 수수료 정수 변환 (10% -> 10)
-        paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));
-
-        paymentEvent.setEventTitle(eventTitle);
-        paymentEvent.setReplyRoutingKey(RabbitMQConfig.SHOP_PAY_REPLY_ROUTING_KEY);
-
-        // 8. RabbitMQ 메시지 전송
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, "pay.request", paymentEvent);
-
-        log.info(">>>> [주문 생성 완료] ID: {}, 운송장: {}, 배송비: {}, 총액: {}",
+        log.info(">>>> [주문 생성 완료 및 다중 전송] ID: {}, 운송장: {}, 배송비: {}, 총액: {}",
                 savedOrder.getOrderId(), generatedTrackingNumber, shippingFee, savedOrder.getTotalAmount());
 
         return OrderResponseDTO.fromEntity(savedOrder);
@@ -422,6 +411,14 @@ public class ShopServiceImpl implements ShopService {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        // [동일 아티스트만 담기 로직] 장바구니에 아이템이 존재할 경우 검증
+        if (!cart.getCartItems().isEmpty()) {
+            Long existingArtistId = cart.getCartItems().get(0).getProduct().getArtistId();
+            if (!existingArtistId.equals(product.getArtistId())) {
+                throw new BusinessException(ErrorCode.INVALID_ARTIST_CART);
+            }
+        }
 
         Optional<CartItem> existingItem = cartitemRepository
                 .findByCart_CartIdAndProduct_ProductId(cart.getCartId(), productId);

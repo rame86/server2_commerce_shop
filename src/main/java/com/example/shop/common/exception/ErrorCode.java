@@ -21,6 +21,7 @@ public enum ErrorCode {
     CANNOT_CANCEL_ORDER(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문입니다."),
     CART_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니를 찾을 수 없습니다."),
     CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "장바구니 상품을 찾을 수 없습니다."),
+    INVALID_ARTIST_CART(HttpStatus.BAD_REQUEST, "장바구니에는 같은 아티스트의 상품만 담을 수 있습니다."),
     WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "찜목록 항목을 찾을 수 없습니다."),
     APPROVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "승인목록을 찾을 수 없습니다."),
     
