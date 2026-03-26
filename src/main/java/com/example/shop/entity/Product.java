@@ -90,6 +90,10 @@ public class Product extends BaseTimeEntity {
     // 관리자 승인/거절 시 상품 활성화 상태 업데이트
     public void updateActiveStatus(boolean isActive) {
         this.isActive = isActive;
+    }
 
+    // 상품 활성화 (승인 리스너에서 호출)
+    public void activateProduct() {
+        this.isActive = true;
     }
 }
