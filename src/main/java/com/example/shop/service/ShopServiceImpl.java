@@ -266,7 +266,9 @@ public class ShopServiceImpl implements ShopService {
 
         BigDecimal feePercentage = new BigDecimal("0.10");
         String eventTitle = "";
-        Long sellerId = null;
+        Long artistId = null;
+        BigDecimal firstItemUnitPrice = BigDecimal.ZERO;
+        int totalQuantity = 0;
 
         // 상품 합계 금액 계산용 (배송비 제외)
         BigDecimal itemsTotalAmount = BigDecimal.ZERO;
@@ -308,10 +310,13 @@ public class ShopServiceImpl implements ShopService {
 
             order.addOrderItem(orderItem);
 
+            totalQuantity += itemDto.getQuantity();
+
             if (i == 0) {
                 eventTitle = product.getTitle()
                         + (requestDto.getItems().size() > 1 ? " 외 " + (requestDto.getItems().size() - 1) + "건" : "");
-                sellerId = product.getSellerId();
+                artistId = product.getArtistId();
+                firstItemUnitPrice = unitPrice;
             }
         }
 
@@ -327,11 +332,12 @@ public class ShopServiceImpl implements ShopService {
         paymentEvent.setType("PAYMENT");
         paymentEvent.setOrderId(savedOrder.getOrderId().toString());
         paymentEvent.setMemberId(memberId);
-        paymentEvent.setArtistId(sellerId);
+        paymentEvent.setArtistId(artistId);
         paymentEvent.setAmount(savedOrder.getTotalAmount()); // 배송비가 포함된 총액 전송
 
-        paymentEvent.setOriginalPrice(savedOrder.getTotalAmount());
-        paymentEvent.setQuantity(1);
+        paymentEvent.setOriginalPrice(firstItemUnitPrice);
+        paymentEvent.setQuantity(totalQuantity);
+        paymentEvent.setShippingFee(shippingFee);
 
         // 수수료 정수 변환 (10% -> 10)
         paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));

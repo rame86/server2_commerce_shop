@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ShopApprovalListener {
 
     private final ShopApprovalRepository shopApprovalRepository;
+    private final com.example.shop.repository.ProductRepository productRepository; // 추가
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     @Transactional
@@ -44,8 +45,30 @@ public class ShopApprovalListener {
 
     // ✅ ShopEventListener 통합 — 응답 메시지 수신 (REPLY_QUEUE_NAME 전용)
     @RabbitListener(queues = RabbitMQConfig.REPLY_QUEUE_NAME)
-    public void replyReceiveMessage(Object message) {
-        // TODO: 결제 결과, 외부 서비스 콜백 등 응답 처리 로직 구현
+    public void replyReceiveMessage(java.util.Map<String, Object> message) {
         log.info("응답 메시지 수신: {}", message);
+
+        try {
+            // Core 서비스에서 ShopResultDTO 등의 형태로 응답이 왔을 때 "CONFIRMED" 상태인 경우 상품을 활성화
+            if (message.containsKey("status") && "CONFIRMED".equals(message.get("status"))) {
+                Object goodsIdObj = message.get("goodsId"); // core쪽 dto의 goodsId = product_id
+
+                if (goodsIdObj != null) {
+                    Long productId = Long.valueOf(goodsIdObj.toString());
+                    
+                    com.example.shop.entity.Product product = productRepository.findById(productId)
+                            .orElseThrow(() -> new IllegalArgumentException("승인 처리 대상 상품을 찾을 수 없습니다. ID: " + productId));
+                    
+                    product.activateProduct(); // is_active = true로 업데이트
+                    productRepository.save(product); // 명시적 저장
+                    
+                    log.info(">>>> Core 서비스 승인 완료! [Product ID: {}] 의 노출 상태(isActive)를 true로 변경했습니다.", productId);
+                } else {
+                    log.warn("승인 응답 메시지에 goodsId(productId)가 존재하지 않습니다.");
+                }
+            }
+        } catch (Exception e) {
+            log.error("응답 메시지 승인 업데이트 중 오류 발생: {}", e.getMessage(), e);
+        }
     }
 }
