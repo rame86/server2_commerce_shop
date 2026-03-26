@@ -148,15 +148,12 @@ public class ShopServiceImpl implements ShopService {
         String color = requestDto.getColor();
         String size = requestDto.getSize();
         String itemCategory = requestDto.getItemCategory();
-        Integer stockQuantity = 0;
+        Integer stockQuantity = requestDto.getStockQuantity() != null ? requestDto.getStockQuantity() : 0;
 
-        if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
+       if (requestDto.getVariants() != null && !requestDto.getVariants().isEmpty()) {
             ProductCreateRequestDTO.VariantDTO firstVariant = requestDto.getVariants().get(0);
-            if (color == null)
-                color = firstVariant.getColor();
-            if (size == null)
-                size = firstVariant.getSize();
-            stockQuantity = firstVariant.getStockQuantity();
+            if (color == null) color = firstVariant.getColor();
+            if (size == null) size = firstVariant.getSize();
         }
 
         // [추가] 1. Product 엔티티 생성 및 저장
@@ -166,6 +163,7 @@ public class ShopServiceImpl implements ShopService {
 
         Product product = Product.builder()
                 .sellerId(memberId)
+                .artistId(requestDto.getArtistId())
                 .sellerType(sellerType)
                 .category(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .title(requestDto.getGoodsName())
@@ -187,7 +185,7 @@ public class ShopServiceImpl implements ShopService {
                 .color(color)
                 .size(size)
                 .additionalPrice(BigDecimal.ZERO)
-                .stockQuantity(stockQuantity != null ? stockQuantity : 0)
+                .stockQuantity(stockQuantity)
                 .skuCode("SKU-" + product.getProductId() + "-" + System.currentTimeMillis())
                 .build();
 
@@ -197,6 +195,7 @@ public class ShopServiceImpl implements ShopService {
         Approval approvalRequest = Approval.builder()
                 .requesterId(memberId)
                 .requesterName(requestDto.getRequesterName())
+                .artistId(requestDto.getArtistId())
                 .goodsName(requestDto.getGoodsName())
                 .goodsType(ProductCategory.valueOf(requestDto.getGoodsType().toUpperCase()))
                 .description(requestDto.getDescription())
