@@ -41,6 +41,9 @@ public class Approval {
     @Column(name = "product_id")
     private Long productId;
 
+    @Column(name = "artist_id", nullable = false)
+    private Long artistId;
+
     @Column(name = "requester_id", nullable = false)
     private Long requesterId;
 

@@ -31,7 +31,7 @@ public class ProductVariant extends BaseTimeEntity {
     @Column(name = "variant_id", columnDefinition = "uuid")
     private UUID variantId;
 
-    // 부모 상품 참조 (지연 로딩)
+    // 상품아이디
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
