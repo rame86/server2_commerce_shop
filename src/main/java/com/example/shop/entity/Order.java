@@ -22,10 +22,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "orders", schema = "shop")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -43,6 +45,14 @@ public class Order extends BaseTimeEntity {
     // 배송지 주소
     @Column(name = "shipping_address", columnDefinition = "TEXT")
     private String shippingAddress;
+
+    // 배송비
+    @Column(name = "shipping_fee", precision = 15, scale = 2)
+    private BigDecimal shippingFee;
+
+    // 운송장번호
+    @Column(name = "tracking_number")
+    private String trackingNumber;
 
     // 주문 총 금액
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)

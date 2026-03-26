@@ -39,6 +39,10 @@ public class Product extends BaseTimeEntity {
     @Column(name = "seller_id", nullable = false)
     private Long sellerId;
 
+    // Core DB 아티스트 식별자 참조 (MSA 구조를 고려해 직접 연관관계 대신 ID만 저장)
+    @Column(name = "artist_id", nullable = false)
+    private Long artistId;
+
     // 판매자 유형 (아티스트 / 일반유저)
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)
@@ -63,7 +67,7 @@ public class Product extends BaseTimeEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    // ✅ base_price 로 컬럼명 변경 (DB 기준)
+    // 원래 판매가격
     @Column(name = "base_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePrice;
 
