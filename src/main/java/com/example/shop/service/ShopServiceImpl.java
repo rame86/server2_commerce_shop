@@ -240,18 +240,31 @@ public class ShopServiceImpl implements ShopService {
     @Transactional
     public OrderResponseDTO createOrder(Long memberId, OrderCreateRequestDTO requestDto) {
 
-        // 1. 주문 기본 엔티티 생성 (DB: orders 테이블)
+        // 1. 운송장 번호 자동 생성 (TRK + 타임스탬프 + UUID 일부 조합)
+        String generatedTrackingNumber = "TRK" + System.currentTimeMillis()
+                + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
+
+        // 2. 배송비 설정 (DTO에서 넘어온 값이 있으면 사용, 없으면 기본값 3000원 설정)
+        BigDecimal shippingFee = requestDto.getShippingFee() != null ? requestDto.getShippingFee()
+                : new BigDecimal("3000");
+
+        // 3. 주문 기본 엔티티 생성 (배송비와 운송장 번호 필드 추가)
         Order order = Order.builder()
                 .memberId(memberId)
                 .shippingAddress(requestDto.getShippingAddress())
+                .shippingFee(shippingFee)
+                .trackingNumber(generatedTrackingNumber) 
                 .status(OrderStatus.PENDING)
                 .build();
 
-        BigDecimal feePercentage = new BigDecimal("0.10"); // 기본 10% (OFFICIAL)
+        BigDecimal feePercentage = new BigDecimal("0.10"); 
         String eventTitle = "";
-        Long sellerId = null; // ✅ artistId -> sellerId로 변경
+        Long sellerId = null;
 
-        // 2. 주문 상품 상세 처리 (DB: order_items 테이블)
+        // 상품 합계 금액 계산용 (배송비 제외)
+        BigDecimal itemsTotalAmount = BigDecimal.ZERO;
+
+        // 4. 주문 상품 상세 처리
         for (int i = 0; i < requestDto.getItems().size(); i++) {
             OrderItemDTO itemDto = requestDto.getItems().get(i);
 
@@ -260,14 +273,16 @@ public class ShopServiceImpl implements ShopService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
             Product product = variant.getProduct();
 
-            // 수수료 판별: OFFICIAL 외(UNOFFICIAL, SECONDHAND) 상품이 하나라도 있으면 15% 적용
+            // 수수료 판별
             String category = product.getCategory().name();
             if ("UNOFFICIAL".equals(category) || "SECONDHAND".equals(category)) {
                 feePercentage = new BigDecimal("0.15");
             }
 
-            // 단가 계산 (기본가 + 옵션가)
+            // 단가 및 소계 계산
             BigDecimal unitPrice = product.getBasePrice().add(variant.getAdditionalPrice());
+            BigDecimal itemSubtotal = unitPrice.multiply(new BigDecimal(itemDto.getQuantity()));
+            itemsTotalAmount = itemsTotalAmount.add(itemSubtotal);
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
@@ -281,37 +296,39 @@ public class ShopServiceImpl implements ShopService {
             if (i == 0) {
                 eventTitle = product.getTitle()
                         + (requestDto.getItems().size() > 1 ? " 외 " + (requestDto.getItems().size() - 1) + "건" : "");
-                sellerId = product.getSellerId(); // ✅ getArtistId() -> getSellerId()로 수정
+                sellerId = product.getSellerId();
             }
         }
 
-        // 3. 주문 정보 저장
+        // 5. 최종 결제 금액 설정 (상품 합계 + 배송비)
+        // Order 엔티티 내에 totalAmount를 계산하는 로직이 없다면 아래와 같이 직접 세팅해야 합니다.
+        order.setTotalAmount(itemsTotalAmount.add(shippingFee));
+
+        // 6. 주문 정보 저장
         Order savedOrder = orderRepository.save(order);
 
-        // 4. 결제 서비스로 보낼 이벤트 생성
+        // 7. 결제 서비스로 보낼 이벤트 생성
         PaymentEventDTO paymentEvent = new PaymentEventDTO();
         paymentEvent.setType("PAYMENT");
         paymentEvent.setOrderId(savedOrder.getOrderId().toString());
         paymentEvent.setMemberId(memberId);
-        paymentEvent.setArtistId(sellerId); // ✅ DTO의 필드명도 sellerId로 맞추는 것을 권장합니다.
-        paymentEvent.setAmount(savedOrder.getTotalAmount());
+        paymentEvent.setArtistId(sellerId);
+        paymentEvent.setAmount(savedOrder.getTotalAmount()); // 배송비가 포함된 총액 전송
 
-        // 🌟 [중요] SettlementService(결제 서버)는 originalPrice * quantity 로 정산액을 계산함.
-        // 여러 품목이 섞인 SHOP 주문의 경우, 전체 합계(totalAmount)를 originalPrice로 보내고
-        // quantity를 1로 고정하여 정산액이 꼬이지 않게 함 (예매 서비스 패턴 참고).
         paymentEvent.setOriginalPrice(savedOrder.getTotalAmount());
         paymentEvent.setQuantity(1);
 
-        // 🌟 [수정] 수수료는 0.10이 아니라 10(%) 처럼 정수로 보내야 결제 서버에서 정확히 계산됨 (divide(100) 대응)
+        // 수수료 정수 변환 (10% -> 10)
         paymentEvent.setFee(feePercentage.multiply(new BigDecimal("100")));
 
         paymentEvent.setEventTitle(eventTitle);
         paymentEvent.setReplyRoutingKey(RabbitMQConfig.SHOP_PAY_REPLY_ROUTING_KEY);
 
-        // 5. RabbitMQ 메시지 전송
+        // 8. RabbitMQ 메시지 전송
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, "pay.request", paymentEvent);
 
-        log.info(">>>> [주문 생성 완료] ID: {}, 판매자: {}, 적용 수수료: {}", savedOrder.getOrderId(), sellerId, feePercentage);
+        log.info(">>>> [주문 생성 완료] ID: {}, 운송장: {}, 배송비: {}, 총액: {}",
+                savedOrder.getOrderId(), generatedTrackingNumber, shippingFee, savedOrder.getTotalAmount());
 
         return OrderResponseDTO.fromEntity(savedOrder);
     }
@@ -511,5 +528,4 @@ public class ShopServiceImpl implements ShopService {
                 .collect(Collectors.toList());
     }
 
-    
 }
