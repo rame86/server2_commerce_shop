@@ -49,6 +49,9 @@ public interface ShopService {
     // 장바구니 아이템 삭제 (cartItemId 기준)
     CartResponseDTO removeFromCart(Long memberId, Long cartItemId);
 
+    // 장바구니 비우기
+    CartResponseDTO clearCart(Long memberId);
+
     // ======================== 찜목록 관련 ========================
     List<WishlistResponseDTO> getWishlist(Long memberId);
 
