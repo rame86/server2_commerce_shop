@@ -507,6 +507,20 @@ public class ShopServiceImpl implements ShopService {
         return result;
     }
 
+    @Override
+    @Transactional
+    public CartResponseDTO clearCart(Long memberId) {
+        Cart cart = cartRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+
+        cartitemRepository.deleteByCart_CartId(cart.getCartId());
+        cart.getCartItems().clear();
+
+        CartResponseDTO result = CartResponseDTO.fromEntity(cart);
+        log.info(">>>> [clearCart 완료] 회원: {}", memberId);
+        return result;
+    }
+
     // ======================== 찜목록 관련 ========================
     @Override
     @Transactional(readOnly = true)

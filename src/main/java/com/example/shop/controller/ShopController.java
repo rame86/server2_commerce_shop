@@ -110,6 +110,13 @@ public class ShopController {
         return shopService.removeFromCart(memberId, cartItemId);
     }
 
+    // 장바구니 비우기
+    @DeleteMapping("/cart")
+    public CartResponseDTO clearCart(@RequestHeader("X-User-Id") Long memberId) {
+        log.info("장바구니 비우기 요청 - 회원: {}", memberId);
+        return shopService.clearCart(memberId);
+    }
+
     // 주문 생성 (주문하기)
     @PostMapping("/order")
     public ResponseEntity<OrderResponseDTO> createOrder(
