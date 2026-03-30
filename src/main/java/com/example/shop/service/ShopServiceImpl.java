@@ -278,7 +278,22 @@ public class ShopServiceImpl implements ShopService {
         for (int i = 0; i < requestDto.getItems().size(); i++) {
             OrderItemDTO itemDto = requestDto.getItems().get(i);
 
-            UUID variantUUID = UUID.fromString(itemDto.getVariantId());
+            UUID variantUUID;
+            try {
+                variantUUID = UUID.fromString(itemDto.getVariantId());
+            } catch (IllegalArgumentException e) {
+                try {
+                    Long productId = Long.parseLong(itemDto.getVariantId());
+                    List<ProductVariant> variants = productVariantRepository.findByProduct_ProductId(productId);
+                    if (variants == null || variants.isEmpty()) {
+                        throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+                    }
+                    variantUUID = variants.get(0).getVariantId();
+                } catch (NumberFormatException nfe) {
+                    throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+                }
+            }
+
             ProductVariant variant = productVariantRepository.findById(variantUUID)
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
             Product product = variant.getProduct();
