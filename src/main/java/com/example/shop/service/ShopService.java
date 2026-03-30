@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.shop.admin.dto.ProductApprovalDTO;
 import com.example.shop.dto.request.OrderCreateRequestDTO;
 import com.example.shop.dto.request.ProductCreateRequestDTO;
 import com.example.shop.dto.response.CartResponseDTO;
@@ -49,6 +48,9 @@ public interface ShopService {
 
     // 장바구니 아이템 삭제 (cartItemId 기준)
     CartResponseDTO removeFromCart(Long memberId, Long cartItemId);
+
+    // 장바구니 비우기
+    CartResponseDTO clearCart(Long memberId);
 
     // ======================== 찜목록 관련 ========================
     List<WishlistResponseDTO> getWishlist(Long memberId);

@@ -58,13 +58,13 @@ import lombok.extern.slf4j.Slf4j;
 public class ShopServiceImpl implements ShopService {
 
     private final ProductRepository productRepository;
-    private final ProductVariantRepository productVariantRepository; // ✅ variant 조회용
+    private final ProductVariantRepository productVariantRepository; // variant 조회용
     private final CartRepository cartRepository;
     private final CartitemRepository cartitemRepository;
     private final OrderRepository orderRepository;
     private final WishlistRepository wishlistRepository;
     private final ApprovalRepository approvalRepository;
-    private final com.example.shop.repository.ReviewRepository reviewRepository; // ✅ 추가
+    private final com.example.shop.repository.ReviewRepository reviewRepository; 
     private final RabbitTemplate rabbitTemplate;
     private final ProductMessageProducer productMessageProducer;
 
@@ -75,10 +75,13 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> getProducts() {
-        // ✅ findAll() → findByIsActive(true) : 판매 중 상품만 조회
-        return productRepository.findByIsActive(true).stream()
+        List<ProductResponseDTO> result = productRepository.findByIsActive(true).stream()
                 .map(this::toProductResponseDTO)
                 .collect(Collectors.toList());
+        
+        
+        log.info(">>>> [getProducts 리턴 데이터] 건수: {}, 데이터: {}", result.size(), result);
+        return result;
     }
 
     @Override
@@ -86,10 +89,15 @@ public class ShopServiceImpl implements ShopService {
     public ProductResponseDTO getProduct(String productId) {
         Product product = productRepository.findById(Long.parseLong(productId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        return toProductResponseDTO(product);
+        
+        ProductResponseDTO result = toProductResponseDTO(product);
+        
+        
+        log.info(">>>> [getProduct 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
-    // Product 엔티티를 DTO로 변환하면서 리븷 정보 및 재고 수량 코집
+    // Product 엔티티를 DTO로 변환하면서 리뷰 정보 및 재고 수량 모집
     private ProductResponseDTO toProductResponseDTO(Product product) {
         ProductResponseDTO dto = ProductResponseDTO.fromEntity(product);
         List<com.example.shop.entity.Review> reviews = reviewRepository
@@ -223,23 +231,32 @@ public class ShopServiceImpl implements ShopService {
         log.info(">>>> [상품 등록 완료] Product ID: {}, Approval ID: {}", product.getProductId(),
                 approvalRequest.getApprovalId());
 
-        return ProductResponseDTO.fromEntity(product); // 생성된 Product 정보를 기반으로 DTO 반환
+        ProductResponseDTO result = ProductResponseDTO.fromEntity(product);
+        
+        
+        log.info(">>>> [createProduct 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     @Override
     @Transactional
     public void deleteProduct(Long memberId, String productId) {
-        // ✅ 존재 여부 확인 후 삭제
+       
         if (!productRepository.existsById(Long.parseLong(productId))) {
             throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
         }
         productRepository.deleteById(Long.parseLong(productId));
+        log.info(">>>> [deleteProduct 완료] 상품 삭제됨 ID: {}", productId);
     }
 
     @Transactional(readOnly = true)
     public List<Approval> getPendingApprovals() {
         // PENDING 상태인 데이터만 최신순으로 가져옴
-        return approvalRepository.findByStatusOrderByCreatedAtDesc(ApprovalStatus.PENDING);
+        List<Approval> result = approvalRepository.findByStatusOrderByCreatedAtDesc(ApprovalStatus.PENDING);
+        
+       
+        log.info(">>>> [getPendingApprovals 리턴 데이터] 건수: {}, 데이터: {}", result.size(), result);
+        return result;
     }
 
     // ======================== 주문 관련 ========================
@@ -359,16 +376,24 @@ public class ShopServiceImpl implements ShopService {
         log.info(">>>> [주문 생성 완료 및 다중 전송] ID: {}, 운송장: {}, 배송비: {}, 총액: {}",
                 savedOrder.getOrderId(), generatedTrackingNumber, shippingFee, savedOrder.getTotalAmount());
 
-        return OrderResponseDTO.fromEntity(savedOrder);
+        OrderResponseDTO result = OrderResponseDTO.fromEntity(savedOrder);
+        
+       
+        log.info(">>>> [createOrder 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponseDTO> getMyOrders(Long memberId, int page, int size) {
         // 기존 페이징 로직 유지
-        return orderRepository.findByMemberId(memberId).stream()
+        List<OrderResponseDTO> result = orderRepository.findByMemberId(memberId).stream()
                 .map(OrderResponseDTO::fromEntity)
                 .collect(Collectors.toList());
+                
+       
+        log.info(">>>> [getMyOrders 리턴 데이터] 건수: {}, 데이터: {}", result.size(), result);
+        return result;
     }
 
     @Override
@@ -376,7 +401,12 @@ public class ShopServiceImpl implements ShopService {
     public OrderResponseDTO getOrder(Long memberId, String orderId) {
         Order order = orderRepository.findById(Long.parseLong(orderId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        return OrderResponseDTO.fromEntity(order);
+                
+        OrderResponseDTO result = OrderResponseDTO.fromEntity(order);
+        
+        
+        log.info(">>>> [getOrder 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     @Override
@@ -410,7 +440,12 @@ public class ShopServiceImpl implements ShopService {
         OrderResponseDTO orderResponse = createOrder(memberId, orderReq);
 
         log.info(">>>> [체크아웃 완료] 주문번호: {}", orderResponse.getOrderId());
-        return "결제가 요청되었습니다. 주문번호: " + orderResponse.getOrderId();
+        
+        String result = "결제가 요청되었습니다. 주문번호: " + orderResponse.getOrderId();
+        
+        
+        log.info(">>>> [checkout 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     // ======================== 장바구니 관련 ========================
@@ -419,7 +454,12 @@ public class ShopServiceImpl implements ShopService {
     public CartResponseDTO getCart(Long memberId) {
         Cart cart = cartRepository.findByMemberId(memberId)
                 .orElseGet(() -> cartRepository.save(Cart.builder().memberId(memberId).build()));
-        return CartResponseDTO.fromEntity(cart);
+                
+        CartResponseDTO result = CartResponseDTO.fromEntity(cart);
+        
+       
+        log.info(">>>> [getCart 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     @Override
@@ -454,7 +494,12 @@ public class ShopServiceImpl implements ShopService {
             cart.addItem(newItem);
             cartitemRepository.save(newItem);
         }
-        return CartResponseDTO.fromEntity(cart);
+        
+        CartResponseDTO result = CartResponseDTO.fromEntity(cart);
+        
+      
+        log.info(">>>> [addToCart 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     @Override
@@ -471,16 +516,38 @@ public class ShopServiceImpl implements ShopService {
         cart.removeItem(item);
         cartitemRepository.delete(item);
 
-        return CartResponseDTO.fromEntity(cart);
+        CartResponseDTO result = CartResponseDTO.fromEntity(cart);
+        
+       
+        log.info(">>>> [removeFromCart 리턴 데이터] 데이터: {}", result);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public CartResponseDTO clearCart(Long memberId) {
+        Cart cart = cartRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+
+        cartitemRepository.deleteByCart_CartId(cart.getCartId());
+        cart.getCartItems().clear();
+
+        CartResponseDTO result = CartResponseDTO.fromEntity(cart);
+        log.info(">>>> [clearCart 완료] 회원: {}", memberId);
+        return result;
     }
 
     // ======================== 찜목록 관련 ========================
     @Override
     @Transactional(readOnly = true)
     public List<WishlistResponseDTO> getWishlist(Long memberId) {
-        return wishlistRepository.findByMemberId(memberId).stream()
+        List<WishlistResponseDTO> result = wishlistRepository.findByMemberId(memberId).stream()
                 .map(WishlistResponseDTO::fromEntity)
                 .collect(Collectors.toList());
+                
+    
+        log.info(">>>> [getWishlist 리턴 데이터] 건수: {}, 데이터: {}", result.size(), result);
+        return result;
     }
 
     @Override
@@ -489,7 +556,7 @@ public class ShopServiceImpl implements ShopService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        return wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
+        WishlistResponseDTO result = wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
                 .map(WishlistResponseDTO::fromEntity)
                 .orElseGet(() -> {
                     Wishlist wishlist = Wishlist.builder()
@@ -498,6 +565,10 @@ public class ShopServiceImpl implements ShopService {
                             .build();
                     return WishlistResponseDTO.fromEntity(wishlistRepository.save(wishlist));
                 });
+                
+   
+        log.info(">>>> [addToWishlist 리턴 데이터] 데이터: {}", result);
+        return result;
     }
 
     @Override
@@ -506,6 +577,7 @@ public class ShopServiceImpl implements ShopService {
         Wishlist wishlist = wishlistRepository.findByMemberIdAndProduct_ProductId(memberId, productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WISHLIST_NOT_FOUND));
         wishlistRepository.delete(wishlist);
+        log.info(">>>> [removeFromWishlist 완료] 찜목록 삭제됨 상품 ID: {}", productId);
     }
 
     // ======================== 추가 기능 구현 ========================
@@ -552,7 +624,7 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional(readOnly = true)
     public List<com.example.shop.dto.response.ReviewResponseDTO> getProductReviews(Long productId) {
-        return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).stream()
+        List<com.example.shop.dto.response.ReviewResponseDTO> result = reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).stream()
                 .map(r -> com.example.shop.dto.response.ReviewResponseDTO.builder()
                         .reviewId(r.getReviewId())
                         .memberId(r.getMemberId())
@@ -563,6 +635,10 @@ public class ShopServiceImpl implements ShopService {
                         .createdAt(r.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+                
+        // 리턴 데이터 로그 추가
+        log.info(">>>> [getProductReviews 리턴 데이터] 건수: {}, 데이터: {}", result.size(), result);
+        return result;
     }
 
 }

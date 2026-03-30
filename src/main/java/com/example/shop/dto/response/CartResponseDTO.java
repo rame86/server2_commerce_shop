@@ -24,6 +24,7 @@ public class CartResponseDTO {
     public static class CartItemDto {
         private Long cartItemId;
         private Long productId;
+        private Long artistId; // 추가: 아티스트 식별자
         private String title;
         private String imageUrl;
         private BigDecimal unitPrice;
@@ -35,9 +36,9 @@ public class CartResponseDTO {
             return CartItemDto.builder()
                     .cartItemId(item.getCartItemId())
                     .productId(item.getProduct().getProductId())
+                    .artistId(item.getProduct().getArtistId()) // 추가
                     .title(item.getProduct().getTitle())
-                    .imageUrl(item.getProduct().getImageUrl() != null
-                            ? "/images/" + item.getProduct().getImageUrl() : null)
+                    .imageUrl(item.getProduct().getImageUrl())
                     .unitPrice(price)
                     .quantity(item.getQuantity())
                     .subtotal(price.multiply(BigDecimal.valueOf(item.getQuantity())))
