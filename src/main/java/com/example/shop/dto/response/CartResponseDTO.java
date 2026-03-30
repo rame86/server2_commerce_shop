@@ -38,8 +38,7 @@ public class CartResponseDTO {
                     .productId(item.getProduct().getProductId())
                     .artistId(item.getProduct().getArtistId()) // 추가
                     .title(item.getProduct().getTitle())
-                    .imageUrl(item.getProduct().getImageUrl() != null
-                            ? "/images/" + item.getProduct().getImageUrl() : null)
+                    .imageUrl(item.getProduct().getImageUrl())
                     .unitPrice(price)
                     .quantity(item.getQuantity())
                     .subtotal(price.multiply(BigDecimal.valueOf(item.getQuantity())))
