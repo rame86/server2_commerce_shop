@@ -299,6 +299,7 @@ public class ShopServiceImpl implements ShopService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
             Product product = variant.getProduct();
 
+            
             // 수수료 판별
             String category = product.getCategory().name();
             if ("UNOFFICIAL".equals(category) || "SECONDHAND".equals(category)) {
